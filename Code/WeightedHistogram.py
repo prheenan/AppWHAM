@@ -12,20 +12,17 @@ import sys
 
 from scipy.sparse import csr_matrix
 
-def work_histogram(ext_bins,extensions,works):
+def work_histogram(ext_bins,extensions,values):
     # W[i][j] is fec i, z [j]
-    matrix_works = np.array(works)
+    matrix_values = np.array(values)
     # switch so that z is along the first axis
-    matrix_works_T = matrix_works.T
+    matrix_values_T = matrix_values.T
     matrix_q_T = np.array(extensions).T
-    histogram = [ [ [] for _i in ext_bins]
-                  for _ in range(matrix_works_T.shape[0])]
-    offset = np.mean(matrix_works_T,axis=1)
-    for i,(q,w) in enumerate(zip(matrix_works_T,matrix_q_T)):
-        idx_q = np.digitize(x=q,bins=w,right=False)
-        for j,idx_q_tmp in enumerate(idx_q):
-            histogram[i][idx_q_tmp].append(w[j]-offset[i])
-    return histogram
+    flat_vals = np.concatenate([w for w in matrix_values_T])
+    ext_idx = [np.digitize(x=w,bins=ext_bins)-1 for w in matrix_q_T]
+    indptr = [0] + list(np.cumsum([len(list_v) for list_v in ext_idx]))
+    to_ret = csr_matrix((flat_vals,np.concatenate(ext_idx),indptr))
+    return to_ret
 
 def wham(extensions,works,kbT,n_ext_bins):
     beta = kbT
@@ -34,6 +31,20 @@ def wham(extensions,works,kbT,n_ext_bins):
                            num=n_ext_bins)
     dq = np.median(np.diff(ext_bins))
     ext_centered = ext_bins - dq/2
-    histogram = work_histogram(ext_centered, extensions, works)
+    work_array = np.array(works,dtype=np.float64)
+    extension_array = np.array(extensions,dtype=np.float64)
+    offset = np.mean(works,axis=0)
+    work_array -= offset
+    ones = np.ones(work_array.shape)
+    indicator = work_histogram(ext_centered, extensions,ones)
+    n_z = work_array.shape[1]
+    n_q = n_ext_bins
+    assert indicator.shape == (n_z,n_q) , "Matrix not (N_z,N_q)"
+    hist_work = work_histogram(ext_centered, extensions,work_array)
+    hist_boltz = hist_work * beta
+    boltzmann_weight = np.expm1(hist_boltz) + indicator
+    # get the sum along the
+    for i,q_tmp in enumerate(ext_centered):
+        pass
     pass
 
