@@ -11,8 +11,11 @@ import sys
 
 sys.path.append("../")
 from Code import WeightedHistogram
+from Lib.SimulationFEC import Test
 
 def run():
+    fwd,rev = Test.HummerData(n=10)
+
     WeightedHistogram.wham(extensions=[[1,2,3,4],[1,2,3,4]],
                            z=[1,2,3,4],
                            works=[[0,2,10,20],[0,3,12,30]],
