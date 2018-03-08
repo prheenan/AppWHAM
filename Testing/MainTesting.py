@@ -12,15 +12,21 @@ import sys
 sys.path.append("../")
 from Code import WeightedHistogram
 from Lib.SimulationFEC import Test
+from scipy.integrate import cumtrapz
 
 def run():
-    fwd,rev = Test.HummerData(n=10)
-
-    WeightedHistogram.wham(extensions=[[1,2,3,4],[1,2,3,4]],
-                           z=[1,2,3,4],
-                           works=[[0,2,10,20],[0,3,12,30]],
-                           kbT=4.1e-21,k=1e-3,
-                           n_ext_bins=3)
+    fwd,rev = Test.HummerData(n=50)
+    key = fwd[0]
+    z = key.Offset + key.Velocity * (key.Time - min(key.Time))
+    extensions = [f.Extension for f in fwd]
+    forces = [f.Force for f in fwd]
+    works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
+    wham_landcape = WeightedHistogram.wham(extensions=extensions,
+                                           z=z,
+                                           works=works,
+                                           kbT=key.kT,k=key.SpringConstant,
+                                           n_ext_bins=50)
+    pass
 
 if __name__ == "__main__":
     run()

@@ -9,10 +9,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+from scipy.stats import binned_statistic_2d, binned_statistic
 
-from scipy.sparse import csr_matrix
-
-from scipy.stats import binned_statistic_2d
+class LandscapeWHAM(object):
+    def __init__(self,q,G0,offset_G0_of_q):
+        self._q = q
+        self._G0 = G0
+        self._offset_G0_of_q = offset_G0_of_q
+    @property
+    def energy(self):
+        return self._G0
+    @property
+    def G0(self):
+        return self.energy
+    @property
+    def q(self):
+        return self._q
 
 def _harmonic_V(q,z,k):
     """
@@ -47,7 +59,7 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     :param k: spring constant in N/m
     :return:
     """
-    beta = kbT
+    beta = 1/kbT
     work_array = np.array(works,dtype=np.float64)
     extension_array = np.array(extensions,dtype=np.float64)
     z_array = np.array(z,dtype=np.float64)
@@ -72,14 +84,16 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     # determine the energy offset at each Z.
     work_offset = np.mean(work_array,axis=0)
     # offset the work and potential to avoid overflows
-    work_array -= work_offset
-    V_i_j = (V_i_j - work_offset)
+    W_offset = work_array - work_offset
+    V_i_j_offset = (V_i_j - work_offset)
     # POST: work_array and V_i_j are now offset how we like..
-    n_fec_M = work_array.shape[0]
-    n_z = work_array.shape[1]
+    n_fec_M = W_offset.shape[0]
+    n_z = W_offset.shape[1]
     n_q = n_ext_bins
-    boltz_array = np.exp(-work_array * beta)
-    hist = binned_statistic_2d(x=extension_array.flatten(),
+    boltz_array = np.exp(-W_offset * beta)
+    # get h_i_j, unnormalized
+    q_flat = extension_array.flatten()
+    hist = binned_statistic_2d(x=q_flat,
                                y=z_array.flatten(),
                                values=boltz_array.flatten(),
                                statistic='sum',
@@ -92,16 +106,25 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
     h_i_j = stat/n_fec_M
-    eta_i = np.mean(np.exp(-beta * work_array),axis=0)
+    eta_i = np.mean(np.exp(-beta * W_offset),axis=0)
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
-    assert V_i_j.shape == (n_q,n_z)
+    assert V_i_j_offset.shape == (n_q,n_z)
     numer_j = np.sum(h_i_j/eta_i,axis=1)
-    denom_j = np.sum(V_i_j/eta_i,axis=1)
-    G_0_rel = -1/beta * (np.log(numer_j) - np.log(denom_j))
+    denom_j = np.sum(V_i_j_offset/eta_i,axis=1)
+    assert (numer_j > 0).all() , \
+        "Invalid <W>_z; mean work > true work"
+    assert (denom_j > 0).all() , \
+        "Invalid <W>_z or V(q,z). Mean work > potential"
+    G0_rel = -1/beta * (np.log(numer_j) - np.log(denom_j))
+    # determine the mean work at each extension
+    mean_w_q, _, _ = binned_statistic(x=q_flat,values=work_array.flatten(),
+                                      bins=with_rightmost_q,statistic='mean')
     # add back in the offset to go into real units
-    q = q_centered
-    pass
+    q = q_centered[:-1]
+    offset_G0_of_q = mean_w_q
+    G0 = G0_rel + offset_G0_of_q
+    return LandscapeWHAM(q,G0,offset_G0_of_q)
 
 
 
