@@ -73,6 +73,9 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     with_rightmost_z = _bin_with_rightmost(z,n=z_array.shape[0],extra=1)
     bins_q = with_rightmost_q[:-1]
     bins_z = with_rightmost_z[:-1]
+    n_fec_M = work_array.shape[0]
+    n_z = bins_z.size
+    n_q = bins_q.size
     # make the z matrix; allow for just passing in a single one...
     if (len(z_array.shape) == 1 or z_array.shape[1] == 0):
         z_array = np.array([z for _ in works])
@@ -83,13 +86,11 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     V_i_j = _harmonic_V(qq,zz,k)
     # determine the energy offset at each Z.
     work_offset = np.mean(work_array,axis=0)
+    assert work_offset.size == n_z
     # offset the work and potential to avoid overflows
     W_offset = work_array - work_offset
     V_i_j_offset = (V_i_j - work_offset)
     # POST: work_array and V_i_j are now offset how we like..
-    n_fec_M = W_offset.shape[0]
-    n_z = W_offset.shape[1]
-    n_q = n_ext_bins
     boltz_array = np.exp(-W_offset * beta)
     # get h_i_j, unnormalized
     q_flat = extension_array.flatten()

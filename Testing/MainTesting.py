@@ -26,10 +26,12 @@ def run():
                                            works=works,
                                            kbT=key.kT,k=key.SpringConstant,
                                            n_ext_bins=50)
+    expected = np.loadtxt("../data/energy.csv",delimiter=",")
     offset = wham_landcape._offset_G0_of_q
-    offset_G_0 = (wham_landcape.G0)
+    q = wham_landcape.q
+    offset_G_0 = (wham_landcape.G0-offset)
     offset_G_0 -= min(offset_G_0)
-    plt.plot(wham_landcape.q,offset_G_0/4.1e-21)
+    plt.plot(q,offset_G_0/4.1e-21)
     plt.show()
     pass
 
