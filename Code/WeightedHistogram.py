@@ -33,7 +33,7 @@ def _harmonic_V(q,z,k):
     :param k: spring constant
     :return: simple harmonic potential.
     """
-    return k * (q-z)**2/2
+    return k * ((q-z)**2)/2
 
 def _bin_with_rightmost(array,n,extra=0):
     """
@@ -93,9 +93,11 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     boltz_array = np.exp(-W_offset * beta)
     # get h_i_j, unnormalized
     q_flat = extension_array.flatten()
+    z_flat = z_array.flatten()
+    val_flat = boltz_array.flatten()
     hist = binned_statistic_2d(x=q_flat,
-                               y=z_array.flatten(),
-                               values=boltz_array.flatten(),
+                               y=z_flat,
+                               values=val_flat,
                                statistic='sum',
                                bins=(with_rightmost_q,with_rightmost_z))
     stat, bins_q, bins_z, binnumber = hist
@@ -110,8 +112,12 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
     assert V_i_j_offset.shape == (n_q,n_z)
+    boltzmann_V_i_j = np.exp(-beta * V_i_j_offset)
     numer_j = np.sum(h_i_j/eta_i,axis=1)
-    denom_j = np.sum(V_i_j_offset/eta_i,axis=1)
+    denom_j = np.sum(boltzmann_V_i_j/eta_i,axis=1)
+    # make sure the shapes match and are the same
+    assert numer_j.shape == denom_j.shape
+    assert numer_j.shape == (n_q,)
     assert (numer_j > 0).all() , \
         "Invalid <W>_z; mean work > true work"
     assert (denom_j > 0).all() , \
