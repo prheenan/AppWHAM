@@ -14,8 +14,9 @@ from Code import WeightedHistogram
 
 def run():
     WeightedHistogram.wham(extensions=[[1,2,3,4],[1,2,3,4]],
+                           z=[1,2,3,4],
                            works=[[0,2,10,20],[0,3,12,30]],
-                           kbT=4.1e-21,
+                           kbT=4.1e-21,k=1e-3,
                            n_ext_bins=3)
 
 if __name__ == "__main__":
