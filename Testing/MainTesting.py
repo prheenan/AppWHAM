@@ -26,8 +26,10 @@ def run():
                                            works=works,
                                            kbT=key.kT,k=key.SpringConstant,
                                            n_ext_bins=50)
-    plt.plot(wham_landcape.q,
-             (wham_landcape.G0-wham_landcape._offset_G0_of_q) / 4.1e-21)
+    offset = wham_landcape._offset_G0_of_q
+    offset_G_0 = (wham_landcape.G0)
+    offset_G_0 -= min(offset_G_0)
+    plt.plot(wham_landcape.q,offset_G_0/4.1e-21)
     plt.show()
     pass
 
