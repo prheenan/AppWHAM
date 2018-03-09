@@ -223,7 +223,9 @@ def wham(fwd_input=None,rev_input=None):
     assert key_stat.shape == (n_q,n_z)
     # get the bidirectional estimators
     h_combined = h_fwd + h_rev
-    combined_weighted = _weighted_value(**kw_rev) + _weighted_value(**kw_fwd)
+    boltz_fwd = _weighted_value(**kw_rev)
+    boltz_rev = _weighted_value(**kw_fwd)
+    combined_weighted = boltz_fwd + boltz_rev
     eta_bidir = np.sum(combined_weighted,axis=0)/n_fec_M
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
