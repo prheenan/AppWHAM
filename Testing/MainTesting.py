@@ -33,7 +33,7 @@ def run():
     fwd,rev = Test.HummerData(n=100)
     fwd_wham = to_wham(fwd)
     rev_wham = to_wham(rev)
-    wham_landcape = WeightedHistogram.wham(fwd_wham,rev_wham)
+    wham_landcape = WeightedHistogram.wham(fwd_wham)
     data_base = "../data/"
     fwd = np.loadtxt(data_base + "data_fwd.csv",delimiter=",")
     bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")

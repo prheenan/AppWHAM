@@ -46,6 +46,9 @@ class InputWHAM(object):
         self.kbT = kbT
         self.n_ext_bins = n_ext_bins
         self.k = k
+    @property
+    def n(self):
+        return np.array(self.works).shape[0]
 
 class _HistogramTerms(object):
     def __init__(self, boltz_array, V_i_j_offset, extension_array,z_array,
@@ -127,17 +130,11 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
                              with_rightmost_q,with_rightmost_z,W_offset)
     return to_ret
 
-def wham(fwd,rev):
+def _wham_sum_hij_times_M(fwd):
     """
     :param fwd: InputWHAM object
-    :return: LandscapeWHAM
+    :return: h_ij * M, where h_ij is defined in Hummer, PNAS, 2010, SI, eq S3
     """
-    beta = 1/fwd.kbT
-    deltaA = BidirectionalUtil._solve_DeltaA(fwd.works,rev.works,offset_fwd=0,
-                                             beta=beta)
-    work_offset = np.mean(fwd.works,axis=0)
-    fwd = _histogram_terms(fwd.z,fwd.extensions,fwd.works,fwd.n_ext_bins,
-                           work_offset,fwd.k,beta)
     # get h_i_j, unnormalized
     q_flat = fwd.extension_array.flatten()
     z_flat = fwd.z_array.flatten()
@@ -148,8 +145,29 @@ def wham(fwd,rev):
                                statistic='sum',
                                bins=(fwd.with_rightmost_q,fwd.with_rightmost_z))
     stat, bins_q, bins_z, binnumber = hist
-    dq_hist = np.median(np.diff(bins_q))/2
-    q_centered = bins_q + dq_hist
+    # XXX check bins?
+    return stat
+
+def wham(fwd=None,rev=None):
+    """
+    :param fwd: InputWHAM object
+    :return: LandscapeWHAM
+    """
+    beta = 1/fwd.kbT
+    n_f = fwd.n if fwd is not None else 0
+    n_r = rev.n if rev is not None else 0
+    if (n_f*n_r > 0):
+        deltaA = BidirectionalUtil._solve_DeltaA(fwd.works,rev.works,
+                                                 offset_fwd=0,
+                                                 beta=beta)
+    else:
+        deltaA = 0
+    work_offset = np.mean(fwd.works,axis=0)
+    fwd = _histogram_terms(fwd.z,fwd.extensions,fwd.works,fwd.n_ext_bins,
+                           work_offset,fwd.k,beta)
+    stat = _wham_sum_hij_times_M(fwd)
+    dq_hist = np.median(np.diff(fwd.bins_q))/2
+    q_centered = fwd.bins_q + dq_hist
     # XXX check bins are correct
     n_q = fwd.n_q
     n_z = fwd.n_z
@@ -181,7 +199,7 @@ def wham(fwd,rev):
                                       statistic='mean')
     """
     # add back in the offset to go into real units
-    q = q_centered[:-1]
+    q = q_centered
     offset_G0_of_q = 0
     G0 = G0_rel + offset_G0_of_q
     return LandscapeWHAM(q,G0,offset_G0_of_q)
