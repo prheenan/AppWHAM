@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import sys
 
 from scipy.stats import binned_statistic_2d, binned_statistic
+from Lib.UtilLandscape import BidirectionalUtil
 
 class LandscapeWHAM(object):
     def __init__(self,q,G0,offset_G0_of_q):
@@ -126,12 +127,14 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
                              with_rightmost_q,with_rightmost_z,W_offset)
     return to_ret
 
-def wham(fwd):
+def wham(fwd,rev):
     """
     :param fwd: InputWHAM object
     :return: LandscapeWHAM
     """
     beta = 1/fwd.kbT
+    deltaA = BidirectionalUtil._solve_DeltaA(fwd.works,rev.works,offset_fwd=0,
+                                             beta=beta)
     work_offset = np.mean(fwd.works,axis=0)
     fwd = _histogram_terms(fwd.z,fwd.extensions,fwd.works,fwd.n_ext_bins,
                            work_offset,fwd.k,beta)
