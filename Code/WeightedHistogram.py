@@ -130,7 +130,7 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
                              with_rightmost_q,with_rightmost_z,W_offset)
     return to_ret
 
-def _wham_sum_hij_times_M(fwd):
+def _wham_sum_hij_times_M(fwd,value_array):
     """
     :param fwd: InputWHAM object. If none,  return 0
     :return: h_ij * M, where h_ij is defined in Hummer, PNAS, 2010, SI, eq S3
@@ -140,7 +140,7 @@ def _wham_sum_hij_times_M(fwd):
     # get h_i_j, unnormalized
     q_flat = fwd.extension_array.flatten()
     z_flat = fwd.z_array.flatten()
-    val_flat = fwd.boltz_array.flatten()
+    val_flat = value_array.flatten()
     hist = binned_statistic_2d(x=q_flat,
                                y=z_flat,
                                values=val_flat,
@@ -167,12 +167,12 @@ def wham(fwd_input=None,rev_input=None):
     n_r = rev_input.n if rev_input is not None else 0
     assert n_f + n_r > 0 , "No forward or reverse data; can't do anything"
     if (n_f*n_r > 0):
-        deltaA = BidirectionalUtil._solve_DeltaA(fwd_input.works,
+        delta_A = BidirectionalUtil._solve_DeltaA(fwd_input.works,
                                                  rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
     else:
-        deltaA = 0
+        delta_A = 0
     work_offset = np.mean(fwd_input.works,axis=0)
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset, beta)
@@ -186,10 +186,15 @@ def wham(fwd_input=None,rev_input=None):
     else:
         # use both; key will be forward (arbitrary)
         key = fwd_terms
-    fwd_h = _wham_sum_hij_times_M(fwd_terms)
-    rev_h = _wham_sum_hij_times_M(rev_terms)
+    Wn = np.array([w[-1]*np.ones(w.size) for w in fwd_input.works])
+    fwd_value = BidirectionalUtil.ForwardWeighted(n_f,n_r,v=1,
+                                                  W=np.array(fwd_input.works),
+                                                  Wn=Wn,delta_A=delta_A,
+                                                  beta=beta)
+    fwd_h = _wham_sum_hij_times_M(fwd_terms,value_array=fwd_terms.boltz_array)
+    rev_h = _wham_sum_hij_times_M(rev_terms,value_array=fwd_terms.boltz_array)
     # determine which will be the key
-    key_stat = _wham_sum_hij_times_M(key)
+    key_stat = _wham_sum_hij_times_M(key,value_array=fwd_terms.boltz_array)
     dq_hist = np.median(np.diff(key.bins_q))/2
     q_centered = key.bins_q + dq_hist
     # XXX check bins are correct
