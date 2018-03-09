@@ -43,8 +43,8 @@ def run():
     q = wham_landcape.q
     offset_G_0 = (wham_landcape.G0-offset)
     offset_G_0 -= min(offset_G_0)
-    plt.plot(q,(offset_G_0-14e-12*q)/4.1e-21)
-    plt.plot(ext_fwd_m,(G_fwd_kT *4.1e-21 - 14e-12 * ext_fwd_m)/4.1e-21)
+    plt.plot(q,offset_G_0)
+    plt.plot(ext_fwd_m,G_fwd_kT*4.1e-21,color='g')
     plt.show()
     pass
 

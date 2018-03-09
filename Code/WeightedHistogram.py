@@ -157,16 +157,19 @@ def get_terms(fwd,work_offset,beta):
                            work_offset, fwd.k, beta)
     return fwd
 
-def h_ij_bidirectional(terms,delta_A,beta,n_f,n_r,f):
+def _weighted_value(terms,f,**kw):
     if (terms is None):
         return 0
     Wn = np.array([w[-1]*np.ones(w.size) for w in terms.W_offset])
-    fwd_value = f(n_f,n_r,v=1,
-                  W=terms.W_offset,
-                  Wn=Wn,delta_A=delta_A,
-                  beta=beta)
+    fwd_value = f(v=1,W=terms.W_offset,Wn=Wn,**kw)
+    return fwd_value
+
+def h_ij_bidirectional(terms,**kw):
+    if (terms is None):
+        return 0
+    fwd_value = _weighted_value(terms,**kw)
     fwd_h = _wham_sum_hij_times_M(terms,value_array=fwd_value)
-    return fwd_h
+    return fwd_h/terms.n_fec_M
 
 def wham(fwd_input=None,rev_input=None):
     """
@@ -201,14 +204,16 @@ def wham(fwd_input=None,rev_input=None):
     else:
         # use both; key_terms will be forward (arbitrary)
         key_terms = fwd_terms
-    kw_bidir = dict(delta_A=delta_A,beta=beta,n_f=n_f,n_r=n_r)
-    kw_fwd = dict(f=BidirectionalUtil.ForwardWeighted,**kw_bidir)
-    kw_rev = dict(f=BidirectionalUtil.ReverseWeighted,**kw_bidir)
-    h_fwd = h_ij_bidirectional(fwd_terms,**kw_fwd)
-    h_rev = h_ij_bidirectional(rev_terms,**kw_rev)
+    kw_bidir = dict(delta_A=delta_A,beta=beta,nf=n_f,nr=n_r)
+    fwd_weight = BidirectionalUtil.ForwardWeighted
+    rev_weight = BidirectionalUtil.ReverseWeighted
+    kw_fwd = dict(terms=fwd_terms,f=fwd_weight,**kw_bidir)
+    kw_rev = dict(terms=rev_terms,f=rev_weight,**kw_bidir)
+    h_fwd = h_ij_bidirectional(**kw_fwd)
+    h_rev = h_ij_bidirectional(**kw_rev)
     # determine which will be the key_terms
     kw_key = kw_fwd if have_fwd else kw_rev
-    key_stat = h_ij_bidirectional(key_terms,**kw_key)
+    key_stat = h_ij_bidirectional(**kw_key)
     dq_hist = np.median(np.diff(key_terms.bins_q))/2
     q_centered = key_terms.bins_q + dq_hist
     # XXX check bins are correct
@@ -216,10 +221,14 @@ def wham(fwd_input=None,rev_input=None):
     n_z = key_terms.n_z
     n_fec_M = key_terms.n_fec_M
     assert key_stat.shape == (n_q,n_z)
+    # get the bidirectional estimators
+    h_combined = h_fwd + h_rev
+    combined_weighted = _weighted_value(**kw_rev) + _weighted_value(**kw_fwd)
+    eta_bidir = np.sum(combined_weighted,axis=0)/n_fec_M
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
-    h_i_j = key_stat/n_fec_M
-    eta_i = np.mean(np.exp(-beta * key_terms.W_offset),axis=0)
+    h_i_j = h_combined/n_fec_M
+    eta_i = eta_bidir
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
     assert key_terms.V_i_j_offset.shape == (n_q,n_z)
