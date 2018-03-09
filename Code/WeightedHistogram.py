@@ -157,14 +157,14 @@ def get_terms(fwd,work_offset,beta):
                            work_offset, fwd.k, beta)
     return fwd
 
-def h_ij_bidirectional(terms,delta_A,beta,n_f,n_r):
+def h_ij_bidirectional(terms,delta_A,beta,n_f,n_r,f):
     if (terms is None):
         return 0
     Wn = np.array([w[-1]*np.ones(w.size) for w in terms.W_offset])
-    fwd_value = BidirectionalUtil.ForwardWeighted(n_f,n_r,v=1,
-                                                  W=terms.W_offset,
-                                                  Wn=Wn,delta_A=delta_A,
-                                                  beta=beta)
+    fwd_value = f(n_f,n_r,v=1,
+                  W=terms.W_offset,
+                  Wn=Wn,delta_A=delta_A,
+                  beta=beta)
     fwd_h = _wham_sum_hij_times_M(terms,value_array=fwd_value)
     return fwd_h
 
@@ -173,34 +173,42 @@ def wham(fwd_input=None,rev_input=None):
     :param fwd: InputWHAM object
     :return: LandscapeWHAM
     """
-    beta = 1/fwd_input.kbT
     n_f = fwd_input.n if fwd_input is not None else 0
     n_r = rev_input.n if rev_input is not None else 0
-    assert n_f + n_r > 0 , "No forward or reverse data; can't do anything"
-    if (n_f*n_r > 0):
+    have_fwd = n_f > 0
+    have_rev = n_r > 0
+    assert have_fwd or have_rev , "No forward or reverse data; can't do anything"
+    # get the key (for getting beta and such)
+    key_input = fwd_input if have_fwd else rev_input
+    beta = 1/key_input.kbT
+    if (have_fwd and have_rev):
         delta_A = BidirectionalUtil._solve_DeltaA(fwd_input.works,
                                                  rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
     else:
         delta_A = 0
-    work_offset = np.mean(fwd_input.works,axis=0)
+    work_offset = np.mean(key_input.works,axis=0)
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset, beta)
     rev_terms = get_terms(rev_input, work_offset, beta)
-    if (n_f > 0 and n_r == 0):
+    if (have_fwd and not have_rev):
         # use forward
         key_terms = fwd_terms
-    elif (n_f == 0 and n_r > 0):
+    elif (have_rev and not have_fwd):
         # use reverse
         key_terms = rev_terms
     else:
         # use both; key_terms will be forward (arbitrary)
         key_terms = fwd_terms
-    h_fwd = h_ij_bidirectional(fwd_terms,delta_A,beta,n_f,n_r)
-    h_rev = h_ij_bidirectional(rev_terms,delta_A,beta,n_f,n_r)
+    kw_bidir = dict(delta_A=delta_A,beta=beta,n_f=n_f,n_r=n_r)
+    kw_fwd = dict(f=BidirectionalUtil.ForwardWeighted,**kw_bidir)
+    kw_rev = dict(f=BidirectionalUtil.ReverseWeighted,**kw_bidir)
+    h_fwd = h_ij_bidirectional(fwd_terms,**kw_fwd)
+    h_rev = h_ij_bidirectional(rev_terms,**kw_rev)
     # determine which will be the key_terms
-    key_stat = h_ij_bidirectional(key_terms,delta_A,beta,n_f,n_r)
+    kw_key = kw_fwd if have_fwd else kw_rev
+    key_stat = h_ij_bidirectional(key_terms,**kw_key)
     dq_hist = np.median(np.diff(key_terms.bins_q))/2
     q_centered = key_terms.bins_q + dq_hist
     # XXX check bins are correct
