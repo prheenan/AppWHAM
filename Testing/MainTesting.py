@@ -9,26 +9,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-sys.path.append("../")
+sys.path.append("..")
 from Code import WeightedHistogram
 from Lib.SimulationFEC import Test
 from scipy.integrate import cumtrapz
 from scipy.interpolate import interp1d
 
-def to_wham(objs):
-    key = objs[0]
-    z = key.Offset + key.Velocity * (key.Time - min(key.Time))
-    extensions = [f.Extension for f in objs]
-    forces = [f.Force for f in objs]
-    works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
-    dict_obj = dict(extensions=extensions,
-                    z=z,
-                    works=works,
-                    kbT=key.kT,
-                    k=key.SpringConstant,
-                    n_ext_bins=200)
-    to_ret = WeightedHistogram.InputWHAM(**dict_obj)
-    return to_ret
 
 def check_losses(expected,predicted,atol,max_rel_loss=0.0137,rtol=2e-2):
     loss = np.abs(predicted-expected)
