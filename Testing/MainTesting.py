@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import sys
 
 sys.path.append("..")
-from Code import WeightedHistogram
+from Code import WeightedHistogram, UtilWHAM
 from Lib.SimulationFEC import Test
 from scipy.integrate import cumtrapz
 from scipy.interpolate import interp1d
@@ -35,8 +35,8 @@ def expected_bidirectional(data_base,q_predicted):
 
 def run():
     fwd,rev = Test.HummerData(n=100)
-    fwd_wham = to_wham(fwd)
-    rev_wham = to_wham(rev)
+    fwd_wham = UtilWHAM.to_wham_input(fwd)
+    rev_wham = UtilWHAM.to_wham_input(rev)
     wham_landcape = WeightedHistogram.wham(fwd_input=fwd_wham,
                                            rev_input=rev_wham)
     q = wham_landcape.q

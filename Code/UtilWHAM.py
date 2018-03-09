@@ -9,9 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-from scipy.stats import binned_statistic_2d, binned_statistic
-from ..Lib.UtilLandscape import BidirectionalUtil
-
 from scipy.integrate import cumtrapz
 from . import WeightedHistogram
 

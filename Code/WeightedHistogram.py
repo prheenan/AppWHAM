@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import sys
 
 from scipy.stats import binned_statistic_2d, binned_statistic
-from ..Lib.UtilLandscape import BidirectionalUtil
+from .UtilLandscape import BidirectionalUtil
 
 class LandscapeWHAM(object):
     def __init__(self,q,G0,offset_G0_of_q,beta):
