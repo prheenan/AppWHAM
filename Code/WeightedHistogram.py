@@ -132,9 +132,11 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
 
 def _wham_sum_hij_times_M(fwd):
     """
-    :param fwd: InputWHAM object
+    :param fwd: InputWHAM object. If none,  return 0
     :return: h_ij * M, where h_ij is defined in Hummer, PNAS, 2010, SI, eq S3
     """
+    if fwd is None:
+        return 0
     # get h_i_j, unnormalized
     q_flat = fwd.extension_array.flatten()
     z_flat = fwd.z_array.flatten()
@@ -148,39 +150,61 @@ def _wham_sum_hij_times_M(fwd):
     # XXX check bins?
     return stat
 
-def wham(fwd=None,rev=None):
+def get_terms(fwd,work_offset,beta):
+    if (fwd is None):
+        return None
+    fwd = _histogram_terms(fwd.z, fwd.extensions, fwd.works, fwd.n_ext_bins,
+                           work_offset, fwd.k, beta)
+    return fwd
+
+def wham(fwd_input=None,rev_input=None):
     """
     :param fwd: InputWHAM object
     :return: LandscapeWHAM
     """
-    beta = 1/fwd.kbT
-    n_f = fwd.n if fwd is not None else 0
-    n_r = rev.n if rev is not None else 0
+    beta = 1/fwd_input.kbT
+    n_f = fwd_input.n if fwd_input is not None else 0
+    n_r = rev_input.n if rev_input is not None else 0
+    assert n_f + n_r > 0 , "No forward or reverse data; can't do anything"
     if (n_f*n_r > 0):
-        deltaA = BidirectionalUtil._solve_DeltaA(fwd.works,rev.works,
+        deltaA = BidirectionalUtil._solve_DeltaA(fwd_input.works,
+                                                 rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
     else:
         deltaA = 0
-    work_offset = np.mean(fwd.works,axis=0)
-    fwd = _histogram_terms(fwd.z,fwd.extensions,fwd.works,fwd.n_ext_bins,
-                           work_offset,fwd.k,beta)
-    stat = _wham_sum_hij_times_M(fwd)
-    dq_hist = np.median(np.diff(fwd.bins_q))/2
-    q_centered = fwd.bins_q + dq_hist
+    work_offset = np.mean(fwd_input.works,axis=0)
+    # get the forward
+    fwd_terms = get_terms(fwd_input, work_offset, beta)
+    rev_terms = get_terms(rev_input, work_offset, beta)
+    if (n_f > 0 and n_r == 0):
+        # use forward
+        key = fwd_terms
+    elif (n_f == 0 and n_r > 0):
+        # use reverse
+        key = rev_terms
+    else:
+        # use both; key will be forward (arbitrary)
+        key = fwd_terms
+    fwd_h = _wham_sum_hij_times_M(fwd_terms)
+    rev_h = _wham_sum_hij_times_M(rev_terms)
+    # determine which will be the key
+    key_stat = _wham_sum_hij_times_M(key)
+    dq_hist = np.median(np.diff(key.bins_q))/2
+    q_centered = key.bins_q + dq_hist
     # XXX check bins are correct
-    n_q = fwd.n_q
-    n_z = fwd.n_z
-    n_fec_M = fwd.n_fec_M
-    assert stat.shape == (n_q,n_z)
+    n_q = key.n_q
+    n_z = key.n_z
+    n_fec_M = key.n_fec_M
+    assert key_stat.shape == (n_q,n_z)
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
-    h_i_j = stat/n_fec_M
-    eta_i = np.mean(np.exp(-beta * fwd.W_offset),axis=0)
+    h_i_j = key_stat/n_fec_M
+    eta_i = np.mean(np.exp(-beta * key.W_offset),axis=0)
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
-    assert fwd.V_i_j_offset.shape == (n_q,n_z)
-    boltzmann_V_i_j = np.exp(-beta * fwd.V_i_j_offset)
+    assert key.V_i_j_offset.shape == (n_q,n_z)
+    boltzmann_V_i_j = np.exp(-beta * key.V_i_j_offset)
     numer_j = np.sum(h_i_j/eta_i,axis=1)
     denom_j = np.sum(boltzmann_V_i_j/eta_i,axis=1)
     # make sure the shapes match and are the same
