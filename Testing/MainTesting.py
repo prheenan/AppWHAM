@@ -25,7 +25,7 @@ def to_wham(objs):
                     works=works,
                     kbT=key.kT,
                     k=key.SpringConstant,
-                    n_ext_bins=50)
+                    n_ext_bins=200)
     to_ret = WeightedHistogram.InputWHAM(**dict_obj)
     return to_ret
 
@@ -33,7 +33,8 @@ def run():
     fwd,rev = Test.HummerData(n=100)
     fwd_wham = to_wham(fwd)
     rev_wham = to_wham(rev)
-    wham_landcape = WeightedHistogram.wham(fwd_input=fwd_wham)
+    wham_landcape = WeightedHistogram.wham(fwd_input=fwd_wham,
+                                           rev_input=rev_wham)
     data_base = "../data/"
     fwd = np.loadtxt(data_base + "data_fwd.csv",delimiter=",")
     bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")
@@ -43,8 +44,8 @@ def run():
     q = wham_landcape.q
     offset_G_0 = (wham_landcape.G0-offset)
     offset_G_0 -= min(offset_G_0)
-    plt.plot(q,offset_G_0)
-    plt.plot(ext_fwd_m,G_fwd_kT*4.1e-21,color='g')
+    plt.plot(q,offset_G_0,'r')
+    plt.plot(ext_fwd_m,G_fwd_kT*4.1e-21 - min(G_fwd_kT*4.1e-21),color='g')
     plt.show()
     pass
 

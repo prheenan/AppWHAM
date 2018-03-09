@@ -86,15 +86,14 @@ def _harmonic_V(q,z,k):
     """
     return k * ((q-z)**2)/2
 
-def _bin_with_rightmost(array,n,extra=0):
+def _bin_with_rightmost(array,n):
     """
     :param array: what array to bin
     :param n: how many bins to have between the min (left edge) and max
     (right edge)
-    :param extra: if the max should be increased at all.
     :return: list of bins of size n+1 spanning the range of array
     """
-    with_rightmost = np.linspace(np.min(array),np.max(array)+extra,
+    with_rightmost = np.linspace(np.min(array),np.max(array),
                                  endpoint=True,num=n+1)
     return with_rightmost
 
@@ -108,8 +107,8 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
         "Must have at least one z point to use "
     assert work_array.shape[0] > 1 , "Must have at least 2 FEC"
     # get the extension bins, including one for the rightmost edge (last point)
-    with_rightmost_q = _bin_with_rightmost(extensions,n_ext_bins,extra=0)
-    with_rightmost_z = _bin_with_rightmost(z,n=z_array.shape[0],extra=1)
+    with_rightmost_q = _bin_with_rightmost(extensions,n_ext_bins)
+    with_rightmost_z = _bin_with_rightmost(z,n=z_array.shape[0])
     bins_q = with_rightmost_q[:-1]
     bins_z = with_rightmost_z[:-1]
     # make the z matrix; allow for just passing in a single one...
