@@ -26,6 +26,32 @@ class LandscapeWHAM(object):
     def q(self):
         return self._q
 
+class _HistogramTerms(object):
+    def __init__(self, boltz_array, V_i_j_offset, extension_array,z_array,
+                 q_hist,z_hist,W_offset):
+        self.boltz_array = boltz_array
+        self.V_i_j_offset = V_i_j_offset
+        self.z_array = z_array
+        self.extension_array = extension_array
+        self.with_rightmost_q = q_hist
+        self.with_rightmost_z = z_hist
+        self.W_offset = W_offset
+    @property
+    def n_fec_M(self):
+        return self.boltz_array.shape[0]
+    @property
+    def bins_z(self):
+        return self.with_rightmost_z[:-1]
+    @property
+    def bins_q(self):
+        return self.with_rightmost_q[:-1]
+    @property
+    def n_z(self):
+        return self.bins_z.size
+    @property
+    def n_q(self):
+        return self.bins_q.size
+
 def _harmonic_V(q,z,k):
     """
     :param q: extension
@@ -47,19 +73,7 @@ def _bin_with_rightmost(array,n,extra=0):
                                  endpoint=True,num=n+1)
     return with_rightmost
 
-def wham(extensions,works,z,kbT,n_ext_bins,k):
-    """
-    :param extensions: list; each element is array like of extension with
-    length N. The entire list has length M (number of FEC). Units of m.
-    :param works: list of length M;
-    each element is an array-like of work with length N. Units of J
-    :param z: either a single list of length N, or an MxN list. Units of m.
-    :param kbT: boltzmann energy in J
-    :param n_ext_bins: number of extension bins to use
-    :param k: spring constant in N/m
-    :return:
-    """
-    beta = 1/kbT
+def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
     work_array = np.array(works,dtype=np.float64)
     extension_array = np.array(extensions,dtype=np.float64)
     z_array = np.array(z,dtype=np.float64)
@@ -73,9 +87,6 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     with_rightmost_z = _bin_with_rightmost(z,n=z_array.shape[0],extra=1)
     bins_q = with_rightmost_q[:-1]
     bins_z = with_rightmost_z[:-1]
-    n_fec_M = work_array.shape[0]
-    n_z = bins_z.size
-    n_q = bins_q.size
     # make the z matrix; allow for just passing in a single one...
     if (len(z_array.shape) == 1 or z_array.shape[1] == 0):
         z_array = np.array([z for _ in works])
@@ -85,35 +96,56 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     zz, qq = np.meshgrid(bins_z,bins_q)
     V_i_j = _harmonic_V(qq,zz,k)
     # determine the energy offset at each Z.
-    work_offset = np.mean(work_array,axis=0)
-    assert work_offset.size == n_z
+    assert work_offset.size == work_array.shape[1]
     # offset the work and potential to avoid overflows
     W_offset = work_array - work_offset
     V_i_j_offset = (V_i_j - work_offset)
     # POST: work_array and V_i_j are now offset how we like..
     boltz_array = np.exp(-W_offset * beta)
+    to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
+                             with_rightmost_q,with_rightmost_z,W_offset)
+    return to_ret
+
+def wham(extensions,works,z,kbT,n_ext_bins,k):
+    """
+    :param extensions: list; each element is array like of extension with
+    length N. The entire list has length M (number of FEC). Units of m.
+    :param works: list of length M;
+    each element is an array-like of work with length N. Units of J
+    :param z: either a single list of length N, or an MxN list. Units of m.
+    :param kbT: boltzmann energy in J
+    :param n_ext_bins: number of extension bins to use
+    :param k: spring constant in N/m
+    :return:
+    """
+    beta = 1/kbT
+    work_offset = np.mean(works,axis=0)
+    fwd = _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta)
     # get h_i_j, unnormalized
-    q_flat = extension_array.flatten()
-    z_flat = z_array.flatten()
-    val_flat = boltz_array.flatten()
+    q_flat = fwd.extension_array.flatten()
+    z_flat = fwd.z_array.flatten()
+    val_flat = fwd.boltz_array.flatten()
     hist = binned_statistic_2d(x=q_flat,
                                y=z_flat,
                                values=val_flat,
                                statistic='sum',
-                               bins=(with_rightmost_q,with_rightmost_z))
+                               bins=(fwd.with_rightmost_q,fwd.with_rightmost_z))
     stat, bins_q, bins_z, binnumber = hist
     dq_hist = np.median(np.diff(bins_q))/2
     q_centered = bins_q + dq_hist
     # XXX check bins are correct
+    n_q = fwd.n_q
+    n_z = fwd.n_z
+    n_fec_M = fwd.n_fec_M
     assert stat.shape == (n_q,n_z)
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
     h_i_j = stat/n_fec_M
-    eta_i = np.mean(np.exp(-beta * W_offset),axis=0)
+    eta_i = np.mean(np.exp(-beta * fwd.W_offset),axis=0)
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
-    assert V_i_j_offset.shape == (n_q,n_z)
-    boltzmann_V_i_j = np.exp(-beta * V_i_j_offset)
+    assert fwd.V_i_j_offset.shape == (n_q,n_z)
+    boltzmann_V_i_j = np.exp(-beta * fwd.V_i_j_offset)
     numer_j = np.sum(h_i_j/eta_i,axis=1)
     denom_j = np.sum(boltzmann_V_i_j/eta_i,axis=1)
     # make sure the shapes match and are the same
@@ -124,12 +156,16 @@ def wham(extensions,works,z,kbT,n_ext_bins,k):
     assert (denom_j > 0).all() , \
         "Invalid <W>_z or V(q,z). Mean work > potential"
     G0_rel = -1/beta * (np.log(numer_j) - np.log(denom_j))
+    """
     # determine the mean work at each extension
-    mean_w_q, _, _ = binned_statistic(x=q_flat,values=work_array.flatten(),
-                                      bins=with_rightmost_q,statistic='mean')
+    mean_w_q, _, _ = binned_statistic(x=q_flat,
+                                      values=work_array.flatten(),
+                                      bins=fwd.with_rightmost_q,
+                                      statistic='mean')
+    """
     # add back in the offset to go into real units
     q = q_centered[:-1]
-    offset_G0_of_q = mean_w_q
+    offset_G0_of_q = 0
     G0 = G0_rel + offset_G0_of_q
     return LandscapeWHAM(q,G0,offset_G0_of_q)
 
