@@ -14,12 +14,11 @@ from Code import WeightedHistogram
 from Lib.SimulationFEC import Test
 from scipy.integrate import cumtrapz
 
-def run():
-    fwd,rev = Test.HummerData(n=100)
-    key = fwd[0]
+def to_wham(objs):
+    key = objs[0]
     z = key.Offset + key.Velocity * (key.Time - min(key.Time))
-    extensions = [f.Extension for f in fwd]
-    forces = [f.Force for f in fwd]
+    extensions = [f.Extension for f in objs]
+    forces = [f.Force for f in objs]
     works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
     dict_obj = dict(extensions=extensions,
                     z=z,
@@ -27,8 +26,14 @@ def run():
                     kbT=key.kT,
                     k=key.SpringConstant,
                     n_ext_bins=50)
-    fwd = WeightedHistogram.InputWHAM(**dict_obj)
-    wham_landcape = WeightedHistogram.wham(fwd)
+    to_ret = WeightedHistogram.InputWHAM(**dict_obj)
+    return to_ret
+
+def run():
+    fwd,rev = Test.HummerData(n=100)
+    fwd_wham = to_wham(fwd)
+    rev_wham = to_wham(rev)
+    wham_landcape = WeightedHistogram.wham(fwd_wham)
     data_base = "../data/"
     fwd = np.loadtxt(data_base + "data_fwd.csv",delimiter=",")
     bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")
