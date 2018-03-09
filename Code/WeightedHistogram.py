@@ -186,12 +186,12 @@ def wham(fwd_input=None,rev_input=None):
     else:
         # use both; key will be forward (arbitrary)
         key = fwd_terms
-    Wn = np.array([w[-1]*np.ones(w.size) for w in fwd_input.works])
+    Wn = np.array([w[-1]*np.ones(w.size) for w in fwd_terms.W_offset])
     fwd_value = BidirectionalUtil.ForwardWeighted(n_f,n_r,v=1,
-                                                  W=np.array(fwd_input.works),
+                                                  W=fwd_terms.W_offset,
                                                   Wn=Wn,delta_A=delta_A,
                                                   beta=beta)
-    fwd_h = _wham_sum_hij_times_M(fwd_terms,value_array=fwd_terms.boltz_array)
+    fwd_h = _wham_sum_hij_times_M(fwd_terms,value_array=fwd_value)
     rev_h = _wham_sum_hij_times_M(rev_terms,value_array=fwd_terms.boltz_array)
     # determine which will be the key
     key_stat = _wham_sum_hij_times_M(key,value_array=fwd_terms.boltz_array)
