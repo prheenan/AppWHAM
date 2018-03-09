@@ -13,10 +13,11 @@ from scipy.stats import binned_statistic_2d, binned_statistic
 from Lib.UtilLandscape import BidirectionalUtil
 
 class LandscapeWHAM(object):
-    def __init__(self,q,G0,offset_G0_of_q):
+    def __init__(self,q,G0,offset_G0_of_q,beta):
         self._q = q
         self._G0 = G0
         self._offset_G0_of_q = offset_G0_of_q
+        self.beta = beta
     @property
     def energy(self):
         return self._G0
@@ -267,7 +268,7 @@ def wham(fwd_input=None,rev_input=None):
     q = q_centered
     offset_G0_of_q = 0
     G0 = G0_rel + offset_G0_of_q
-    return LandscapeWHAM(q,G0,offset_G0_of_q)
+    return LandscapeWHAM(q,G0,offset_G0_of_q,beta=beta)
 
 
 
