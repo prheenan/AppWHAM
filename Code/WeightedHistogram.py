@@ -52,7 +52,7 @@ class InputWHAM(object):
 
 class _HistogramTerms(object):
     def __init__(self, boltz_array, V_i_j_offset, extension_array,z_array,
-                 q_hist,z_hist,W_offset):
+                 q_hist,z_hist,W_offset,beta):
         self.boltz_array = boltz_array
         self.V_i_j_offset = V_i_j_offset
         self.z_array = z_array
@@ -60,6 +60,7 @@ class _HistogramTerms(object):
         self.with_rightmost_q = q_hist
         self.with_rightmost_z = z_hist
         self.W_offset = W_offset
+        self.beta = beta
     @property
     def n_fec_M(self):
         return self.boltz_array.shape[0]
@@ -127,7 +128,7 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
     # POST: work_array and V_i_j are now offset how we like..
     boltz_array = np.exp(-W_offset * beta)
     to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
-                             with_rightmost_q,with_rightmost_z,W_offset)
+                             with_rightmost_q,with_rightmost_z,W_offset,beta)
     return to_ret
 
 def _wham_sum_hij_times_M(fwd,value_array):
@@ -171,6 +172,36 @@ def h_ij_bidirectional(terms,**kw):
     fwd_h = _wham_sum_hij_times_M(terms,value_array=fwd_value)
     return fwd_h/terms.n_fec_M
 
+def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
+    # XXX check bins are correct
+    n_q = key_terms.n_q
+    n_z = key_terms.n_z
+    n_fec_M = key_terms.n_fec_M
+    beta = key_terms.beta
+    # POST: things are OK.
+    combined_weighted = boltz_fwd + boltz_rev
+    h_combined = h_fwd + h_rev
+    eta_bidir = np.sum(combined_weighted, axis=0) / n_fec_M
+    # make h_i_j --  i runs over extension q, j runs over control z --
+    # by dividing by the number of curves
+    h_i_j = h_combined
+    eta_i = eta_bidir
+    assert h_i_j.shape == (n_q, n_z)
+    assert eta_i.shape == (n_z,)
+    assert key_terms.V_i_j_offset.shape == (n_q, n_z)
+    boltzmann_V_i_j = np.exp(-beta * key_terms.V_i_j_offset)
+    numer_j = np.sum(h_i_j / eta_i, axis=1)
+    denom_j = np.sum(boltzmann_V_i_j / eta_i, axis=1)
+    # make sure the shapes match and are the same
+    assert numer_j.shape == denom_j.shape
+    assert numer_j.shape == (n_q,)
+    assert (numer_j > 0).all(), \
+        "Invalid <W>_z; mean work > true work"
+    assert (denom_j > 0).all(), \
+        "Invalid <W>_z or V(q,z). Mean work > potential"
+    G0_rel = -1 / beta * (np.log(numer_j) - np.log(denom_j))
+    return G0_rel
+
 def wham(fwd_input=None,rev_input=None):
     """
     :param fwd: InputWHAM object
@@ -213,38 +244,19 @@ def wham(fwd_input=None,rev_input=None):
     h_rev = h_ij_bidirectional(**kw_rev)
     # determine which will be the key_terms
     kw_key = kw_fwd if have_fwd else kw_rev
-    key_stat = h_ij_bidirectional(**kw_key)
     dq_hist = np.median(np.diff(key_terms.bins_q))/2
     q_centered = key_terms.bins_q + dq_hist
-    # XXX check bins are correct
-    n_q = key_terms.n_q
-    n_z = key_terms.n_z
-    n_fec_M = key_terms.n_fec_M
-    assert key_stat.shape == (n_q,n_z)
     # get the bidirectional estimators
-    h_combined = h_fwd + h_rev
-    boltz_fwd = _weighted_value(**kw_rev)
-    boltz_rev = _weighted_value(**kw_fwd)
-    combined_weighted = boltz_fwd + boltz_rev
-    eta_bidir = np.sum(combined_weighted,axis=0)/n_fec_M
-    # make h_i_j --  i runs over extension q, j runs over control z --
-    # by dividing by the number of curves
-    h_i_j = h_combined/n_fec_M
-    eta_i = eta_bidir
-    assert h_i_j.shape == (n_q,n_z)
-    assert eta_i.shape == (n_z,)
-    assert key_terms.V_i_j_offset.shape == (n_q,n_z)
-    boltzmann_V_i_j = np.exp(-beta * key_terms.V_i_j_offset)
-    numer_j = np.sum(h_i_j/eta_i,axis=1)
-    denom_j = np.sum(boltzmann_V_i_j/eta_i,axis=1)
-    # make sure the shapes match and are the same
-    assert numer_j.shape == denom_j.shape
-    assert numer_j.shape == (n_q,)
-    assert (numer_j > 0).all() , \
-        "Invalid <W>_z; mean work > true work"
-    assert (denom_j > 0).all() , \
-        "Invalid <W>_z or V(q,z). Mean work > potential"
-    G0_rel = -1/beta * (np.log(numer_j) - np.log(denom_j))
+    boltz_fwd = _weighted_value(**kw_fwd)
+    boltz_rev = _weighted_value(**kw_rev)
+    # make sure if things aren't directional, nothing is changing.
+    if not have_rev:
+        assert boltz_rev == 0
+        assert h_rev == 0
+    if not have_fwd:
+        assert boltz_fwd == 0
+        assert h_fwd == 0
+    G0_rel = _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms)
     """
     # determine the mean work at each extension
     mean_w_q, _, _ = binned_statistic(x=q_flat,
