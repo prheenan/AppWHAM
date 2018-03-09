@@ -157,6 +157,17 @@ def get_terms(fwd,work_offset,beta):
                            work_offset, fwd.k, beta)
     return fwd
 
+def h_ij_bidirectional(terms,delta_A,beta,n_f,n_r):
+    if (terms is None):
+        return 0
+    Wn = np.array([w[-1]*np.ones(w.size) for w in terms.W_offset])
+    fwd_value = BidirectionalUtil.ForwardWeighted(n_f,n_r,v=1,
+                                                  W=terms.W_offset,
+                                                  Wn=Wn,delta_A=delta_A,
+                                                  beta=beta)
+    fwd_h = _wham_sum_hij_times_M(terms,value_array=fwd_value)
+    return fwd_h
+
 def wham(fwd_input=None,rev_input=None):
     """
     :param fwd: InputWHAM object
@@ -179,37 +190,32 @@ def wham(fwd_input=None,rev_input=None):
     rev_terms = get_terms(rev_input, work_offset, beta)
     if (n_f > 0 and n_r == 0):
         # use forward
-        key = fwd_terms
+        key_terms = fwd_terms
     elif (n_f == 0 and n_r > 0):
         # use reverse
-        key = rev_terms
+        key_terms = rev_terms
     else:
-        # use both; key will be forward (arbitrary)
-        key = fwd_terms
-    Wn = np.array([w[-1]*np.ones(w.size) for w in fwd_terms.W_offset])
-    fwd_value = BidirectionalUtil.ForwardWeighted(n_f,n_r,v=1,
-                                                  W=fwd_terms.W_offset,
-                                                  Wn=Wn,delta_A=delta_A,
-                                                  beta=beta)
-    fwd_h = _wham_sum_hij_times_M(fwd_terms,value_array=fwd_value)
-    rev_h = _wham_sum_hij_times_M(rev_terms,value_array=fwd_terms.boltz_array)
-    # determine which will be the key
-    key_stat = _wham_sum_hij_times_M(key,value_array=fwd_terms.boltz_array)
-    dq_hist = np.median(np.diff(key.bins_q))/2
-    q_centered = key.bins_q + dq_hist
+        # use both; key_terms will be forward (arbitrary)
+        key_terms = fwd_terms
+    h_fwd = h_ij_bidirectional(fwd_terms,delta_A,beta,n_f,n_r)
+    h_rev = h_ij_bidirectional(rev_terms,delta_A,beta,n_f,n_r)
+    # determine which will be the key_terms
+    key_stat = h_ij_bidirectional(key_terms,delta_A,beta,n_f,n_r)
+    dq_hist = np.median(np.diff(key_terms.bins_q))/2
+    q_centered = key_terms.bins_q + dq_hist
     # XXX check bins are correct
-    n_q = key.n_q
-    n_z = key.n_z
-    n_fec_M = key.n_fec_M
+    n_q = key_terms.n_q
+    n_z = key_terms.n_z
+    n_fec_M = key_terms.n_fec_M
     assert key_stat.shape == (n_q,n_z)
     # make h_i_j --  i runs over extension q, j runs over control z --
     # by dividing by the number of curves
     h_i_j = key_stat/n_fec_M
-    eta_i = np.mean(np.exp(-beta * key.W_offset),axis=0)
+    eta_i = np.mean(np.exp(-beta * key_terms.W_offset),axis=0)
     assert h_i_j.shape == (n_q,n_z)
     assert eta_i.shape == (n_z,)
-    assert key.V_i_j_offset.shape == (n_q,n_z)
-    boltzmann_V_i_j = np.exp(-beta * key.V_i_j_offset)
+    assert key_terms.V_i_j_offset.shape == (n_q,n_z)
+    boltzmann_V_i_j = np.exp(-beta * key_terms.V_i_j_offset)
     numer_j = np.sum(h_i_j/eta_i,axis=1)
     denom_j = np.sum(boltzmann_V_i_j/eta_i,axis=1)
     # make sure the shapes match and are the same
