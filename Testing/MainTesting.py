@@ -26,12 +26,17 @@ def run():
                                            works=works,
                                            kbT=key.kT,k=key.SpringConstant,
                                            n_ext_bins=50)
-    expected = np.loadtxt("../data/energy.csv",delimiter=",")
+    data_base = "../data/"
+    fwd = np.loadtxt(data_base + "data_fwd.csv",delimiter=",")
+    bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")
+    expected = bidir
+    ext_fwd_m, G_fwd_kT = expected[:,0] * 1e-9, expected[:,1]
     offset = wham_landcape._offset_G0_of_q
     q = wham_landcape.q
     offset_G_0 = (wham_landcape.G0-offset)
     offset_G_0 -= min(offset_G_0)
-    plt.plot(q,offset_G_0/4.1e-21)
+    plt.plot(q,(offset_G_0-14e-12*q)/4.1e-21)
+    plt.plot(ext_fwd_m,(G_fwd_kT *4.1e-21 - 14e-12 * ext_fwd_m)/4.1e-21)
     plt.show()
     pass
 
