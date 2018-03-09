@@ -26,6 +26,26 @@ class LandscapeWHAM(object):
     def q(self):
         return self._q
 
+class InputWHAM(object):
+    def __init__(self,extensions,works,z,kbT,n_ext_bins,k):
+        """
+        :param extensions: list; each element is array like of extension with
+        length N. The entire list has length M (number of FEC). Units of m.
+        :param works: list of length M;
+        each element is an array-like of work with length N. Units of J
+        :param z: either a single list of length N, or an MxN list. Units of m.
+        :param kbT: boltzmann energy in J
+        :param n_ext_bins: number of extension bins to use
+        :param k: spring constant in N/m
+        :return:
+        """
+        self.extensions = extensions
+        self.works = works
+        self.z = z
+        self.kbT = kbT
+        self.n_ext_bins = n_ext_bins
+        self.k = k
+
 class _HistogramTerms(object):
     def __init__(self, boltz_array, V_i_j_offset, extension_array,z_array,
                  q_hist,z_hist,W_offset):
@@ -106,21 +126,15 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
                              with_rightmost_q,with_rightmost_z,W_offset)
     return to_ret
 
-def wham(extensions,works,z,kbT,n_ext_bins,k):
+def wham(fwd):
     """
-    :param extensions: list; each element is array like of extension with
-    length N. The entire list has length M (number of FEC). Units of m.
-    :param works: list of length M;
-    each element is an array-like of work with length N. Units of J
-    :param z: either a single list of length N, or an MxN list. Units of m.
-    :param kbT: boltzmann energy in J
-    :param n_ext_bins: number of extension bins to use
-    :param k: spring constant in N/m
-    :return:
+    :param fwd: InputWHAM object
+    :return: LandscapeWHAM
     """
-    beta = 1/kbT
-    work_offset = np.mean(works,axis=0)
-    fwd = _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta)
+    beta = 1/fwd.kbT
+    work_offset = np.mean(fwd.works,axis=0)
+    fwd = _histogram_terms(fwd.z,fwd.extensions,fwd.works,fwd.n_ext_bins,
+                           work_offset,fwd.k,beta)
     # get h_i_j, unnormalized
     q_flat = fwd.extension_array.flatten()
     z_flat = fwd.z_array.flatten()

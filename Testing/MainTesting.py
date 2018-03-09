@@ -21,11 +21,14 @@ def run():
     extensions = [f.Extension for f in fwd]
     forces = [f.Force for f in fwd]
     works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
-    wham_landcape = WeightedHistogram.wham(extensions=extensions,
-                                           z=z,
-                                           works=works,
-                                           kbT=key.kT,k=key.SpringConstant,
-                                           n_ext_bins=50)
+    dict_obj = dict(extensions=extensions,
+                    z=z,
+                    works=works,
+                    kbT=key.kT,
+                    k=key.SpringConstant,
+                    n_ext_bins=50)
+    fwd = WeightedHistogram.InputWHAM(**dict_obj)
+    wham_landcape = WeightedHistogram.wham(fwd)
     data_base = "../data/"
     fwd = np.loadtxt(data_base + "data_fwd.csv",delimiter=",")
     bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")
