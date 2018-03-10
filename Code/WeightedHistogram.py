@@ -234,7 +234,10 @@ def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
     assert h_i_j.shape == (n_q, n_z)
     assert eta_i.shape == (n_z,)
     assert key_terms.V_i_j_offset.shape == (n_q, n_z)
-    boltzmann_V_i_j = np.exp(-beta * key_terms.V_i_j_offset)
+    boltzmann_arg_ij = -beta * key_terms.V_i_j_offset
+    boltzmann_arg_ij = np.maximum(boltzmann_arg_ij,-700)
+    boltzmann_arg_ij = np.minimum(boltzmann_arg_ij,700)
+    boltzmann_V_i_j = BidirectionalUtil.Exp(boltzmann_arg_ij)
     numer_j = np.sum(h_i_j / eta_i, axis=1)
     denom_j = np.sum(boltzmann_V_i_j / eta_i, axis=1)
     # make sure the shapes match and are the same
