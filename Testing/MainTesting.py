@@ -17,12 +17,25 @@ from scipy.interpolate import interp1d
 
 
 def check_losses(expected,predicted,atol,max_rel_loss=0.0137,rtol=2e-2):
+    """
+    :param expected: "actual" landscape
+    :param predicted: WHAM prediction
+    :param atol: absolute energy tol (J)
+    :param max_rel_loss: maximum loss (relative to sum of all eergy)
+    :param rtol: relative tolerance
+    :return:  nothing, throws error if something goes wrong
+    """
     loss = np.abs(predicted-expected)
     loss_rel = np.sum(loss)/np.sum(np.mean([predicted,expected],axis=0))
     assert loss_rel < max_rel_loss
     np.testing.assert_allclose(predicted,expected,atol=atol,rtol=rtol)
 
 def expected_bidirectional(data_base,q_predicted):
+    """
+    :param data_base: where the data live
+    :param q_predicted: the extenesions we want the landscpe at
+    :return: expected G0 in J
+    """
     bidir = np.loadtxt(data_base + "data_bidir.csv",delimiter=",")
     expected = bidir
     ext_fwd_m, G_fwd_J = expected[:,0] * 1e-9, expected[:,1]*4.1e-21
@@ -34,6 +47,9 @@ def expected_bidirectional(data_base,q_predicted):
     return G0_expected
 
 def test_hummer():
+    """
+    :return: Nothing; tests humer data
+    """
     fwd,rev = Test.HummerData(n=100)
     fwd_wham = UtilWHAM.to_wham_input(fwd)
     rev_wham = UtilWHAM.to_wham_input(rev)
@@ -55,9 +71,11 @@ def test_hummer():
                  max_rel_loss=0.0150, rtol=2e-2)
 
 
-
+def test_utils():
+    pass
 
 def run():
+    test_utils()
     test_hummer()
 
 if __name__ == "__main__":

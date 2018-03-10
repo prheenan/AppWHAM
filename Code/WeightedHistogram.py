@@ -14,6 +14,12 @@ from .UtilLandscape import BidirectionalUtil
 
 class LandscapeWHAM(object):
     def __init__(self,q,G0,offset_G0_of_q,beta):
+        """
+        :param q: extension in meters, size N
+        :param G0: energy in J, size N
+        :param offset_G0_of_q: offset used for energy, size N
+        :param beta:  1/kbT, units of J
+        """
         self._q = q
         self._G0 = G0
         self._offset_G0_of_q = offset_G0_of_q
@@ -99,6 +105,17 @@ def _bin_with_rightmost(array,n):
     return with_rightmost
 
 def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
+    """
+    :param z: array of size M; each element are the spring positions (i.e. z,
+    e.g. the stage position in AFM) of size N. Units of m
+    :param extensions: see z, except for molecular extension. Units of m
+    :param works: see z, except the work in J
+    :param n_ext_bins: number of extension bins to use
+    :param work_offset: how to offset the work, in J. Size MxN
+    :param k: spring constant, in N/m
+    :param beta: the inverse boltzmann energy (1/kbT) in J
+    :return: _HistogramTerms object
+    """
     work_array = np.array(works,dtype=np.float64)
     extension_array = np.array(extensions,dtype=np.float64)
     z_array = np.array(z,dtype=np.float64)
@@ -152,6 +169,14 @@ def _wham_sum_hij_times_M(fwd,value_array):
     return stat
 
 def get_terms(fwd,work_offset,beta):
+    """
+    ease-of-use funciton for _histogram_terms
+
+    :param fwd: InputWHAM object (not necessarily forward)
+    :param work_offset:  how to offset fwd
+    :param beta: 1/kbT, in J
+    :return: see _histogram_terms
+    """
     if (fwd is None):
         return None
     fwd = _histogram_terms(fwd.z, fwd.extensions, fwd.works, fwd.n_ext_bins,
@@ -159,6 +184,13 @@ def get_terms(fwd,work_offset,beta):
     return fwd
 
 def _weighted_value(terms,f,**kw):
+    """
+    :param terms: see get_terms
+    :param f: function to use for weighting
+    (e.g. BidirectionalUtil.ForwardWeighted)
+    :param kw: passed to f
+    :return: see f
+    """
     if (terms is None):
         return 0
     Wn = np.array([w[-1]*np.ones(w.size) for w in terms.W_offset])
@@ -166,6 +198,11 @@ def _weighted_value(terms,f,**kw):
     return fwd_value
 
 def h_ij_bidirectional(terms,**kw):
+    """
+    :param terms:see  see get_terms
+    :param kw: passed to _weighted_value
+    :return: see _wham_sum_hij_times_M
+    """
     if (terms is None):
         return 0
     fwd_value = _weighted_value(terms,**kw)
@@ -173,6 +210,14 @@ def h_ij_bidirectional(terms,**kw):
     return fwd_h/terms.n_fec_M
 
 def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
+    """
+    :param boltz_fwd: eta_i in the forward direction, or 0 if no forward
+    :param h_fwd: see h_ij_bidirectional, for the forward direction
+    :param boltz_rev: see boltz_fwd
+    :param h_rev: see h_fwd
+    :param key_terms: see get_terms; used for (e.g.) getting bin sizes, beta
+    :return:
+    """
     # XXX check bins are correct
     n_q = key_terms.n_q
     n_z = key_terms.n_z
