@@ -33,7 +33,7 @@ def expected_bidirectional(data_base,q_predicted):
     G0_expected -= np.min(G0_expected)
     return G0_expected
 
-def run():
+def test_hummer():
     fwd,rev = Test.HummerData(n=100)
     fwd_wham = UtilWHAM.to_wham_input(fwd)
     rev_wham = UtilWHAM.to_wham_input(rev)
@@ -47,10 +47,18 @@ def run():
     kT = 1/wham_landcape.beta
     check_losses(expected=G0_expected, predicted=G0_WHAM, atol=1.25*kT,
                  max_rel_loss=0.0137, rtol=2e-2)
-    plt.plot(q,G0_WHAM,'r')
-    plt.plot(q,G0_expected,color='g')
-    plt.show()
-    pass
+    # check the forward is close
+    wham_landcape_fwd = WeightedHistogram.wham(fwd_input=fwd_wham)
+    G0_fwd = wham_landcape_fwd.G0
+    G0_fwd -= min(G0_fwd)
+    check_losses(expected=G0_expected, predicted=G0_fwd, atol=1.25*kT,
+                 max_rel_loss=0.0150, rtol=2e-2)
+
+
+
+
+def run():
+    test_hummer()
 
 if __name__ == "__main__":
     run()

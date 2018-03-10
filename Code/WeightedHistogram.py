@@ -257,13 +257,6 @@ def wham(fwd_input=None,rev_input=None):
         assert boltz_fwd == 0
         assert h_fwd == 0
     G0_rel = _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms)
-    """
-    # determine the mean work at each extension
-    mean_w_q, _, _ = binned_statistic(x=q_flat,
-                                      values=work_array.flatten(),
-                                      bins=fwd.with_rightmost_q,
-                                      statistic='mean')
-    """
     # add back in the offset to go into real units
     q = q_centered
     offset_G0_of_q = 0
