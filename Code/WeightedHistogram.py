@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import sys
 
 from scipy.stats import binned_statistic_2d, binned_statistic
-from .UtilLandscape import BidirectionalUtil
+from .UtilLandscape import BidirectionalUtil, Conversions
 
 class LandscapeWHAM(object):
     def __init__(self,q,G0,offset_G0_of_q,beta):
@@ -33,6 +33,16 @@ class LandscapeWHAM(object):
     @property
     def q(self):
         return self._q
+    @property
+    def q_nm(self):
+        return self.q * 1e9
+    @property
+    def G0_kT(self):
+        return self.G0 * self.beta
+    @property
+    def G0_kcal_per_mol(self):
+        # J/mol -> kcal/mol (note that the 1/mol are implicit)
+        return self.G0 * Conversions.kcal_per_mol_per_J()
 
 class InputWHAM(object):
     def __init__(self,extensions,works,z,kbT,n_ext_bins,k):
