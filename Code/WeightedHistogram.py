@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import warnings
 
 from scipy.stats import binned_statistic_2d, binned_statistic
 from .UtilLandscape import BidirectionalUtil, Conversions
@@ -253,10 +254,11 @@ def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
     # make sure the shapes match and are the same
     assert numer_j.shape == denom_j.shape
     assert numer_j.shape == (n_q,)
-    assert (numer_j > 0).all(), \
-        "Invalid <W>_z; mean work > true work"
-    assert (denom_j > 0).all(), \
-        "Invalid <W>_z or V(q,z). Mean work > potential"
+    if not (numer_j > 0).all():
+        warnings.warn("Invalid <W>_z; mean work > true work",RuntimeWarning)
+    if not (denom_j > 0).all():
+        warnings.warn("Invalid <W>_z or V(q,z). Mean work > potential",
+                      RuntimeWarning)
     G0_rel = -1 / beta * (np.log(numer_j) - np.log(denom_j))
     return G0_rel
 
