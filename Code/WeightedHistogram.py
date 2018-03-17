@@ -25,6 +25,12 @@ class LandscapeWHAM(object):
         self._G0 = G0
         self._offset_G0_of_q = offset_G0_of_q
         self.beta = beta
+    def _slice(self,s):
+        to_ret = LandscapeWHAM(self._q,self._G0,self._offset_G0_of_q,self.beta)
+        sanit = lambda x: x[s].copy()
+        to_ret._q  = sanit(to_ret._q)
+        to_ret._G0 = sanit(to_ret._G0)
+        return to_ret
     @property
     def energy(self):
         return self._G0
