@@ -12,7 +12,10 @@ import sys
 from scipy.integrate import cumtrapz
 from . import WeightedHistogram
 
-def to_wham_input(objs):
+def to_wham_input(objs,n_ext_bins=200):
+    if len(objs) == 0:
+        return []
+    # POST: actually have something to return.
     key = objs[0]
     z = key.Offset + key.Velocity * (key.Time - min(key.Time))
     extensions = [f.Extension for f in objs]
@@ -23,6 +26,6 @@ def to_wham_input(objs):
                     works=works,
                     kbT=key.kT,
                     k=key.SpringConstant,
-                    n_ext_bins=200)
+                    n_ext_bins=n_ext_bins)
     to_ret = WeightedHistogram.InputWHAM(**dict_obj)
     return to_ret
