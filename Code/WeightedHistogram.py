@@ -52,7 +52,8 @@ class LandscapeWHAM(object):
         return self.G0 * Conversions.kcal_per_mol_per_J()
 
 class InputWHAM(object):
-    def __init__(self,extensions,works,z,kbT,n_ext_bins,k):
+    def __init__(self,extensions,works,z,kbT,n_ext_bins,k,n_z_bins=None,
+                 z_bins=None,ext_bins=None):
         """
         :param extensions: list; each element is array like of extension with
         length N. The entire list has length M (number of FEC). Units of m.
@@ -62,13 +63,21 @@ class InputWHAM(object):
         :param kbT: boltzmann energy in J
         :param n_ext_bins: number of extension bins to use
         :param k: spring constant in N/m
+        :param n_z_bins: number of bins in z (defalts to n_ext_bins)
+        :param z_bins: actual z bins to use. overrides n_z_bins
+        :param ext_bins: actual q bins to use. overrides n_z_bins
         :return:
         """
         self.extensions = extensions
         self.works = works
         self.z = z
         self.kbT = kbT
-        self.n_ext_bins = n_ext_bins
+        if (n_z_bins is None):
+            n_z_bins = z.size
+        if (z_bins is None):
+            self.z_bins = _bin_with_rightmost(self.z,n_z_bins)
+        if (ext_bins is None):
+            self.q_bins = _bin_with_rightmost(self.extensions,n_ext_bins)
         self.k = k
     @property
     def n(self):
@@ -121,13 +130,14 @@ def _bin_with_rightmost(array,n):
                                  endpoint=True,num=n+1)
     return with_rightmost
 
-def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
+def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta):
     """
     :param z: array of size M; each element are the spring positions (i.e. z,
     e.g. the stage position in AFM) of size N. Units of m
     :param extensions: see z, except for molecular extension. Units of m
     :param works: see z, except the work in J
-    :param n_ext_bins: number of extension bins to use
+    :param q_bins: extension bins to use
+    :param z_bins: z bins to use.
     :param work_offset: how to offset the work, in J. Size MxN
     :param k: spring constant, in N/m
     :param beta: the inverse boltzmann energy (1/kbT) in J
@@ -142,8 +152,8 @@ def _histogram_terms(z,extensions,works,n_ext_bins,work_offset,k,beta):
         "Must have at least one z point to use "
     assert work_array.shape[0] > 1 , "Must have at least 2 FEC"
     # get the extension bins, including one for the rightmost edge (last point)
-    with_rightmost_q = _bin_with_rightmost(extensions,n_ext_bins)
-    with_rightmost_z = _bin_with_rightmost(z,n=z_array.shape[0])
+    with_rightmost_q = q_bins
+    with_rightmost_z = z_bins
     bins_q = with_rightmost_q[:-1]
     bins_z = with_rightmost_z[:-1]
     # make the z matrix; allow for just passing in a single one...
@@ -196,8 +206,8 @@ def get_terms(fwd,work_offset,beta):
     """
     if (fwd is None):
         return None
-    fwd = _histogram_terms(fwd.z, fwd.extensions, fwd.works, fwd.n_ext_bins,
-                           work_offset, fwd.k, beta)
+    fwd = _histogram_terms(fwd.z, fwd.extensions, fwd.works, fwd.q_bins,
+                           fwd.z_bins,work_offset, fwd.k, beta)
     return fwd
 
 def _weighted_value(terms,f,**kw):
