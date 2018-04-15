@@ -9,9 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-sys.path.append("../")
-from Code import WeightedHistogram, UtilWHAM
-from Lib.SimulationFEC import Test
+sys.path.append("../../")
+from AppWHAM.Code import WeightedHistogram, UtilWHAM
+from AppWHAM.Lib.SimulationFEC import Test
 from scipy.integrate import cumtrapz
 from scipy.interpolate import interp1d
 
