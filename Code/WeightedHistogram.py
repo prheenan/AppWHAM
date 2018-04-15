@@ -85,7 +85,7 @@ class InputWHAM(object):
 
 class _HistogramTerms(object):
     def __init__(self, boltz_array, V_i_j_offset, extension_array,z_array,
-                 q_hist,z_hist,W_offset,beta):
+                 q_hist,z_hist,W_offset,beta,work_subtracted):
         self.boltz_array = boltz_array
         self.V_i_j_offset = V_i_j_offset
         self.z_array = z_array
@@ -94,6 +94,8 @@ class _HistogramTerms(object):
         self.with_rightmost_z = z_hist
         self.W_offset = W_offset
         self.beta = beta
+        # the offset in W_offset and V_i_j_offset
+        self.work_subtracted = work_subtracted
     @property
     def n_fec_M(self):
         return self.boltz_array.shape[0]
@@ -172,7 +174,8 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta):
     # POST: work_array and V_i_j are now offset how we like..
     boltz_array = np.exp(-W_offset * beta)
     to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
-                             with_rightmost_q,with_rightmost_z,W_offset,beta)
+                             with_rightmost_q,with_rightmost_z,W_offset,beta,
+                             work_subtracted=work_offset)
     return to_ret
 
 def _wham_sum_hij_times_M(fwd,value_array):
