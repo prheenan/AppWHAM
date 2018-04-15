@@ -32,6 +32,12 @@ class LandscapeWHAM(object):
         to_ret._G0 = sanit(to_ret._G0)
         return to_ret
     @property
+    def kT(self):
+        return 1/self.beta
+    @property
+    def G_0(self):
+        return self.energy
+    @property
     def energy(self):
         return self._G0
     @property

@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-sys.path.append("..")
+sys.path.append("../")
 from Code import WeightedHistogram, UtilWHAM
 from Lib.SimulationFEC import Test
 from scipy.integrate import cumtrapz
@@ -46,7 +46,7 @@ def expected_bidirectional(data_base,q_predicted):
     G0_expected -= np.min(G0_expected)
     return G0_expected
 
-def test_hummer():
+def tst_hummer():
     """
     :return: Nothing; tests humer data
     """
@@ -71,12 +71,9 @@ def test_hummer():
                  max_rel_loss=0.0150, rtol=2e-2)
 
 
-def test_utils():
-    pass
 
 def run():
-    test_utils()
-    test_hummer()
+    tst_hummer()
 
 if __name__ == "__main__":
     run()
