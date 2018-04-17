@@ -69,6 +69,12 @@ def tst_hummer():
     G0_fwd -= min(G0_fwd)
     check_losses(expected=G0_expected, predicted=G0_fwd, atol=1.25*kT,
                  max_rel_loss=0.0150, rtol=2e-2)
+    # check that the reverse is close
+    wham_landcape_rev = WeightedHistogram.wham(rev_input=rev_wham)
+    G0_rev = wham_landcape_rev.G0
+    G0_rev -= min(G0_rev)
+    check_losses(expected=G0_expected, predicted=G0_rev, atol=1.25*kT,
+                 max_rel_loss=0.0150, rtol=2e-2)
 
 
 
