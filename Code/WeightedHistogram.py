@@ -325,8 +325,13 @@ def wham(fwd_input=None,rev_input=None):
     rev_weight = BidirectionalUtil.ReverseWeighted
     kw_fwd = dict(terms=fwd_terms,f=fwd_weight,**kw_bidir)
     kw_rev = dict(terms=rev_terms,f=rev_weight,**kw_bidir)
+    kw_rev_hij = dict(**kw_rev)
+    # for hij, we should keep the index / ordering the same, so we 'flip back'.
+    # the binning takes care of the rest for us.
+    kw_rev_hij['f'] = \
+        lambda *args, **kwargs : np.flip(rev_weight(*args,**kwargs),-1)
     h_fwd = h_ij_bidirectional(**kw_fwd)
-    h_rev = h_ij_bidirectional(**kw_rev)
+    h_rev = h_ij_bidirectional(**kw_rev_hij)
     # determine which will be the key_terms
     kw_key = kw_fwd if have_fwd else kw_rev
     dq_hist = np.median(np.diff(key_terms.bins_q))/2
