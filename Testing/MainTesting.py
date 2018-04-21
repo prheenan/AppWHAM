@@ -61,26 +61,28 @@ def tst_hummer():
     G0_WHAM = wham_landcape.G0
     G0_WHAM -= min(G0_WHAM)
     kT = 1/wham_landcape.beta
-    check_losses(expected=G0_expected, predicted=G0_WHAM, atol=1.25*kT,
-                 max_rel_loss=0.0161, rtol=2e-2)
+    kw_err = dict(atol=1.25*kT,max_rel_loss=0.0162, rtol=3e-2)
+    check_losses(expected=G0_expected, predicted=G0_WHAM,**kw_err)
     # check the forward is close
     wham_landcape_fwd = WeightedHistogram.wham(fwd_input=fwd_wham)
     G0_fwd = wham_landcape_fwd.G0
     G0_fwd -= min(G0_fwd)
-    check_losses(expected=G0_expected, predicted=G0_fwd, atol=1.25*kT,
-                 max_rel_loss=0.0150, rtol=2e-2)
+    check_losses(expected=G0_expected, predicted=G0_fwd,**kw_err)
     # check the 'forward as reverse' is close
     wham_landcape_fwd_2 = WeightedHistogram.wham(rev_input=fwd_wham)
     G0_fwd_2 = wham_landcape_fwd_2.G0
     G0_fwd_2 -= min(G0_fwd_2)
-    check_losses(expected=G0_expected, predicted=G0_fwd_2, atol=1.25*kT,
-                 max_rel_loss=0.0150, rtol=2e-2)
+    check_losses(expected=G0_expected, predicted=G0_fwd_2,**kw_err)
+    # check  the 'reverse as fwd' is close
+    wham_landcape_rev_2 = WeightedHistogram.wham(fwd_input=rev_wham)
+    G0_rev_2 = wham_landcape_rev_2.G0
+    G0_rev_2 -= min(G0_rev_2)
+    check_losses(expected=G0_expected, predicted=G0_rev_2,**kw_err)
     # check that the reverse is close
     wham_landcape_rev = WeightedHistogram.wham(rev_input=rev_wham)
     G0_rev = wham_landcape_rev.G0
     G0_rev -= min(G0_rev)
-    check_losses(expected=G0_expected, predicted=G0_rev, atol=1.25*kT,
-                 max_rel_loss=0.0150, rtol=2e-2)
+    check_losses(expected=G0_expected, predicted=G0_rev,**kw_err)
 
 
 
