@@ -174,9 +174,7 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     zz, qq = np.meshgrid(bins_z,bins_q)
     V_i_j = _harmonic_V(qq,zz,k)
     if (is_reverse):
-        # reverse and re-zero the works
-        work_offset = work_offset[::-1].copy()
-        work_offset -= work_offset[0]
+        # reverse the potential
         V_i_j = V_i_j[::-1].copy()
         V_i_j *= -1
     # determine the energy offset at each Z.
@@ -186,6 +184,8 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     V_i_j_offset = (V_i_j - work_offset)
     # POST: work_array and V_i_j are now offset how we like..
     boltz_array = np.exp(-W_offset * beta)
+    if (is_reverse):
+        V_i_j_offset = V_i_j_offset[::-1]
     to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
                              with_rightmost_q,with_rightmost_z,W_offset,beta,
                              work_subtracted=work_offset)
@@ -316,13 +316,18 @@ def wham(fwd_input=None,rev_input=None):
         # reverse and re-zero the work, so the offsets are close.
         w_rev_tmp = np.mean(rev_input.works, axis=0)[::-1]
         w_rev_tmp -= min(w_rev_tmp)
-        work_offset = 0.5 * ( w_fwd_tmp + w_rev_tmp )
+        work_offset_fwd = 0.5 * ( w_fwd_tmp + w_rev_tmp )
+        work_offset_rev = work_offset_fwd[::-1].copy()
+        work_offset_rev -= work_offset_rev[0]
     else:
         delta_A = 0
-        work_offset = np.mean(key_input.works,axis=0)
+        # only one (the correct one) will be used, so we can set the offsets
+        # the same
+        work_offset_fwd = np.mean(key_input.works,axis=0)
+        work_offset_rev = work_offset_fwd
     # get the forward
-    fwd_terms = get_terms(fwd_input, work_offset, beta)
-    rev_terms = get_terms(rev_input, work_offset, beta,is_reverse=True)
+    fwd_terms = get_terms(fwd_input, work_offset_fwd, beta)
+    rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True)
     if (have_fwd and not have_rev):
         # use forward
         key_terms = fwd_terms
