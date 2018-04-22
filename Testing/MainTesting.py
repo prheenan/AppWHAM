@@ -16,19 +16,25 @@ from scipy.integrate import cumtrapz
 from scipy.interpolate import interp1d
 
 
-def check_losses(expected,predicted,atol,max_rel_loss=0.0137,rtol=2e-2):
+def check_losses(expected,predicted,atol,max_rel_loss=0.0137,rtol=2e-2,
+                 assert_doesnt_match=False):
     """
     :param expected: "actual" landscape
     :param predicted: WHAM prediction
     :param atol: absolute energy tol (J)
     :param max_rel_loss: maximum loss (relative to sum of all eergy)
     :param rtol: relative tolerance
+    :param assert_doesnt_match: if true, makes the the loss is *worse* than
+    expected by at least a factor of 10
     :return:  nothing, throws error if something goes wrong
     """
     loss = np.abs(predicted-expected)
     loss_rel = np.sum(loss)/np.sum(np.mean([predicted,expected],axis=0))
-    assert loss_rel < max_rel_loss
-    np.testing.assert_allclose(predicted,expected,atol=atol,rtol=rtol)
+    if assert_doesnt_match:
+        assert not np.isfinite(loss_rel) or (loss_rel > max_rel_loss * 10)
+    else:
+        assert loss_rel < max_rel_loss
+        np.testing.assert_allclose(predicted,expected,atol=atol,rtol=rtol)
 
 def expected_bidirectional(data_base,q_predicted):
     """
@@ -68,16 +74,18 @@ def tst_hummer():
     G0_fwd = wham_landcape_fwd.G0
     G0_fwd -= min(G0_fwd)
     check_losses(expected=G0_expected, predicted=G0_fwd,**kw_err)
-    # check the 'forward as reverse' is close
+    # check the 'forward as reverse' ist close
     wham_landcape_fwd_2 = WeightedHistogram.wham(rev_input=fwd_wham)
     G0_fwd_2 = wham_landcape_fwd_2.G0
     G0_fwd_2 -= min(G0_fwd_2)
-    check_losses(expected=G0_expected, predicted=G0_fwd_2,**kw_err)
-    # check  the 'reverse as fwd' is close
+    check_losses(expected=G0_expected, predicted=G0_fwd_2,
+                 assert_doesnt_match=True,**kw_err)
+    # check  the 'reverse as fwd' isnt close
     wham_landcape_rev_2 = WeightedHistogram.wham(fwd_input=rev_wham)
     G0_rev_2 = wham_landcape_rev_2.G0
     G0_rev_2 -= min(G0_rev_2)
-    check_losses(expected=G0_expected, predicted=G0_rev_2,**kw_err)
+    check_losses(expected=G0_expected, predicted=G0_rev_2,
+                 assert_doesnt_match=True,**kw_err)
     # check that the reverse is close
     wham_landcape_rev = WeightedHistogram.wham(rev_input=rev_wham)
     G0_rev = wham_landcape_rev.G0

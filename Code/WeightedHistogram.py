@@ -138,7 +138,8 @@ def _bin_with_rightmost(array,n):
                                  endpoint=True,num=n+1)
     return with_rightmost
 
-def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta):
+def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
+                     is_reverse=False):
     """
     :param z: array of size M; each element are the spring positions (i.e. z,
     e.g. the stage position in AFM) of size N. Units of m
@@ -172,6 +173,12 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta):
     # get the potential, using the bins
     zz, qq = np.meshgrid(bins_z,bins_q)
     V_i_j = _harmonic_V(qq,zz,k)
+    if (is_reverse):
+        # reverse and re-zero the works
+        work_offset = work_offset[::-1].copy()
+        work_offset -= work_offset[0]
+        V_i_j = V_i_j[::-1].copy()
+        V_i_j *= -1
     # determine the energy offset at each Z.
     assert work_offset.size == work_array.shape[1]
     # offset the work and potential to avoid overflows
@@ -204,7 +211,7 @@ def _wham_sum_hij_times_M(fwd,value_array):
     # XXX check bins?
     return stat
 
-def get_terms(fwd,work_offset,beta):
+def get_terms(fwd,work_offset,beta,**kw):
     """
     ease-of-use funciton for _histogram_terms
 
@@ -216,7 +223,7 @@ def get_terms(fwd,work_offset,beta):
     if (fwd is None):
         return None
     fwd = _histogram_terms(fwd.z, fwd.extensions, fwd.works, fwd.q_bins,
-                           fwd.z_bins,work_offset, fwd.k, beta)
+                           fwd.z_bins,work_offset, fwd.k, beta,**kw)
     return fwd
 
 def _weighted_value(terms,f,**kw):
@@ -305,12 +312,17 @@ def wham(fwd_input=None,rev_input=None):
                                                  rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
+        w_fwd_tmp = np.mean(fwd_input.works,axis=0)
+        # reverse and re-zero the work, so the offsets are close.
+        w_rev_tmp = np.mean(rev_input.works, axis=0)[::-1]
+        w_rev_tmp -= min(w_rev_tmp)
+        work_offset = 0.5 * ( w_fwd_tmp + w_rev_tmp )
     else:
         delta_A = 0
-    work_offset = np.mean(key_input.works,axis=0)
+        work_offset = np.mean(key_input.works,axis=0)
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset, beta)
-    rev_terms = get_terms(rev_input, work_offset, beta)
+    rev_terms = get_terms(rev_input, work_offset, beta,is_reverse=True)
     if (have_fwd and not have_rev):
         # use forward
         key_terms = fwd_terms
