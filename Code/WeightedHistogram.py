@@ -186,6 +186,7 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     boltz_array = np.exp(-W_offset * beta)
     if (is_reverse):
         V_i_j_offset = V_i_j_offset[::-1]
+        V_i_j_offset *= -1
     to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
                              with_rightmost_q,with_rightmost_z,W_offset,beta,
                              work_subtracted=work_offset)
@@ -252,14 +253,14 @@ def h_ij_bidirectional(terms,**kw):
     fwd_h = _wham_sum_hij_times_M(terms,value_array=fwd_value)
     return fwd_h/terms.n_fec_M
 
-def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
+def _energy_terms(key_terms,boltz_fwd,boltz_rev,h_fwd,h_rev):
     """
-    :param boltz_fwd: eta_i in the forward direction, or 0 if no forward
-    :param h_fwd: see h_ij_bidirectional, for the forward direction
-    :param boltz_rev: see boltz_fwd
-    :param h_rev: see h_fwd
-    :param key_terms: see get_terms; used for (e.g.) getting bin sizes, beta
-    :return:
+    :param key_terms: term to use as a 'key' for getting number of q bins, etc
+    :param boltz_fwd:  see _h_and_boltz_helper
+    :param boltz_rev: see _h_and_boltz_helper
+    :param h_fwd: see _h_and_boltz_helper
+    :param h_rev: see _h_and_boltz_helper
+    :return:  tuple of (V_ij, h_ij, eta_i)
     """
     # XXX check bins are correct
     n_q = key_terms.n_q
@@ -278,11 +279,48 @@ def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
     assert eta_i.shape == (n_z,)
     assert key_terms.V_i_j_offset.shape == (n_q, n_z)
     boltzmann_arg_ij = -beta * key_terms.V_i_j_offset
-    boltzmann_arg_ij = np.maximum(boltzmann_arg_ij,-700)
-    boltzmann_arg_ij = np.minimum(boltzmann_arg_ij,700)
+    boltzmann_arg_ij = np.maximum(boltzmann_arg_ij, -700)
+    boltzmann_arg_ij = np.minimum(boltzmann_arg_ij, 700)
     boltzmann_V_i_j = BidirectionalUtil.Exp(boltzmann_arg_ij)
+    return boltzmann_V_i_j, h_i_j, eta_i
+
+def _fraction_terms(boltzmann_V_i_j, h_i_j, eta_i):
+    """
+    :param boltzmann_V_i_j: see output of _energy_terms
+    :param h_i_j:  see output of _energy_terms
+    :param eta_i: see output of _energy_terms
+    :return:
+    """
     numer_j = np.sum(h_i_j / eta_i, axis=1)
     denom_j = np.sum(boltzmann_V_i_j / eta_i, axis=1)
+    return numer_j, denom_j
+
+def _numer_and_denom(key_terms,boltz_fwd,boltz_rev,h_fwd,h_rev):
+    """
+    :param key_terms: see _energy_terms
+    :param boltz_fwd: see _energy_terms
+    :param boltz_rev: see _energy_terms
+    :param h_fwd: see _energy_terms
+    :param h_rev: see _energy_terms
+    :return: numerator and denominator; -log(n/d) is proportional to energy
+    """
+     args = _energy_terms(key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev)
+     numer_j, denom_j = _fraction_terms(*args)
+     return numer_j, denom_j
+
+def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
+    """
+    :param boltz_fwd: eta_i in the forward direction, or 0 if no forward
+    :param h_fwd: see h_ij_bidirectional, for the forward direction
+    :param boltz_rev: see boltz_fwd
+    :param h_rev: see h_fwd
+    :param key_terms: see get_terms; used for (e.g.) getting bin sizes, beta
+    :return:
+    """
+    numer_j, denom_j = \
+        _numer_and_denom(key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev)
+    n_q = key_terms.n_q
+    beta = key_terms.beta
     # make sure the shapes match and are the same
     assert numer_j.shape == denom_j.shape
     assert numer_j.shape == (n_q,)

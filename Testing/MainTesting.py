@@ -28,8 +28,13 @@ def check_losses(expected,predicted,atol,max_rel_loss=0.0137,rtol=2e-2,
     expected by at least a factor of 10
     :return:  nothing, throws error if something goes wrong
     """
+    denom = np.mean([predicted, expected], axis=0)
+    ok_idx = np.where(np.isfinite(predicted) & (denom > 0))
+    predicted = predicted[ok_idx]
+    expected = expected[ok_idx]
+    denom = denom[ok_idx]
     loss = np.abs(predicted-expected)
-    loss_rel = np.sum(loss)/np.sum(np.mean([predicted,expected],axis=0))
+    loss_rel = np.sum(loss)/np.sum(denom)
     if assert_doesnt_match:
         assert not np.isfinite(loss_rel) or (loss_rel > max_rel_loss * 10)
     else:
@@ -86,21 +91,23 @@ def tst_landscapes(fwd_wham,rev_wham):
     G0_rev -= min(G0_rev)
     check_losses(expected=G0_expected, predicted=G0_rev, **kw_err)
 
-def _check_whitebox(expected_terms,actual_terms):
-    error_kw = dict(atol=1e-30, rtol=1e-6)
-    fs = [lambda x: x.z_array,
-          lambda x: x.extension_array,
-          lambda x: x.with_rightmost_q,
-          lambda x: x.with_rightmost_z,
-          lambda x: x.beta,
-          lambda x: x.W_offset,
-          lambda x: x.work_subtracted,
-          lambda x: x.boltz_array,
-          lambda x: x.V_i_j_offset]
-    for i,f in enumerate(fs):
+def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.151):
+    error_kw = dict(atol=1e-30, rtol=1e-2)
+    fs = [ [lambda x: x.with_rightmost_q,error_kw],
+           [lambda x: x.with_rightmost_z,error_kw],
+           [lambda x: x.beta,error_kw]]
+    for i,(f,error_kw_tmp) in enumerate(fs):
         expected = f(expected_terms)
         actual = f(actual_terms)
-        np.testing.assert_allclose(expected,actual,**error_kw)
+        np.testing.assert_allclose(expected,actual,**error_kw_tmp)
+    # check the V a little differently
+    V_exp = expected_terms.V_i_j_offset
+    V_actual = actual_terms.V_i_j_offset
+    V_loss = np.abs(V_exp - V_actual)
+    V_mean = np.mean([V_exp, V_actual], axis=0)
+    V_rel_loss = (V_loss / V_mean)
+    median_loss = np.median(V_rel_loss)
+    assert median_loss < max_median_loss
 
 def tst_whitebox(fwd_input,rev_input):
     # get the terms with fwd and reverse
@@ -109,24 +116,32 @@ def tst_whitebox(fwd_input,rev_input):
     h_fwd, h_rev, boltz_fwd, boltz_rev = \
         WeightedHistogram._h_and_boltz_helper(fwd_terms, rev_terms, delta_A,
                                               beta, n_f, n_r)
-    # get the arguments when the forward or reverse are missing; make sure they
-    # are the same
-    dict_vals = [ dict(fwd_input=fwd_input, rev_input=rev_input),
-                  dict(fwd_input=fwd_input, rev_input=None),
-                  dict(fwd_input=None, rev_input=rev_input)]
-    for kw in dict_vals:
-        check_fwd = kw['fwd_input'] is not None
-        check_rev = kw['rev_input'] is not None
-        n_f_tmp = n_f if check_fwd else 0
-        n_r_tmp = n_r if check_rev else 0
-        delta_A_tmp = delta_A if check_fwd and check_rev else 0
-        dict_final = dict(delta_A=delta_A_tmp,beta=beta, n_f=n_f_tmp,
-                          n_r=n_r_tmp,**kw)
-        rev_terms_tmp, fwd_terms_tmp, key_terms_tmp, delta_A, n_f, n_r, beta = \
-            WeightedHistogram._term_helper(**kw)
-        if (check_fwd):
-            _check_whitebox(fwd_terms_tmp, fwd_terms)
-
+    # try when we just have reverse
+    rev_terms_only, _, _, delta_A_rev, n_f_rev, n_r_rev, beta_rev= \
+        WeightedHistogram._term_helper(fwd_input=None, rev_input=rev_input)
+    _, h_rev_only, _, boltz_rev_only = \
+        WeightedHistogram._h_and_boltz_helper(None, rev_terms_only, delta_A_rev,
+                                              beta_rev, n_f_rev, n_r_rev)
+    # make sure the fwd and reverse terms match OK
+    _check_whitebox(key_terms, rev_terms)
+    # key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev
+    term_dicts = [ [key_terms, 0, boltz_rev, 0, h_rev],
+                   [key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev]]
+    numers, denoms = [],[]
+    for terms in term_dicts:
+        numer,denom = WeightedHistogram._numer_and_denom(*terms)
+        numers.append(numer)
+        denoms.append(denom)
+    to_plot = [-np.log(n/d) for n,d in zip(numers,denoms)]
+    colors = ['r','b','g']
+    key = to_plot[-1]
+    for p,c in zip(to_plot,colors):
+        where_finite = np.where(np.isfinite(p))
+        # XXX assert finite everywhere?
+        # all units are kbT
+        np.testing.assert_allclose(p[where_finite],key[where_finite],
+                                   atol=3,rtol=1e-2)
+    # POST: 'just reverse' is pretty blose to bidirectional
 
 
 def tst_hummer():
@@ -137,7 +152,7 @@ def tst_hummer():
     fwd_wham = UtilWHAM.to_wham_input(fwd)
     rev_wham = UtilWHAM.to_wham_input(rev)
     # do some 'whitebox' testing, to make sure things are OK...
-    #tst_whitebox(fwd_wham, rev_wham)
+    tst_whitebox(fwd_wham, rev_wham)
     # make sure the landscapes are ok
     tst_landscapes(fwd_wham,rev_wham)
 
