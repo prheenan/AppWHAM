@@ -294,10 +294,51 @@ def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
     G0_rel = -1 / beta * (np.log(numer_j) - np.log(denom_j))
     return G0_rel
 
-def wham(fwd_input=None,rev_input=None):
+def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
     """
-    :param fwd: InputWHAM object
-    :return: LandscapeWHAM
+    :param fwd_terms:  output of _term_helper
+    :param rev_terms: output of _term_helper
+    :param delta_A: output of _term_helper
+    :param beta: output of _term_helper
+    :param n_f: output of _term_helper
+    :param n_r: output of _term_helper
+    :return:  tuple of (h_ij for the fwd, h_ij for the reverse, boltzmann factor
+    for the fwd, boltmzmann factor for the revere) 
+    """
+    have_rev = n_r > 0
+    have_fwd = n_f > 0
+    kw_bidir = dict(delta_A=delta_A,beta=beta,nf=n_f,nr=n_r)
+    fwd_weight = BidirectionalUtil.ForwardWeighted
+    rev_weight = BidirectionalUtil.ReverseWeighted
+    kw_fwd = dict(terms=fwd_terms,f=fwd_weight,**kw_bidir)
+    kw_rev = dict(terms=rev_terms,f=rev_weight,**kw_bidir)
+    kw_rev_hij = dict(**kw_rev)
+    # for hij, we should keep the index / ordering the same, so we 'flip back'.
+    # the binning takes care of the rest for us.
+    kw_rev_hij['f'] = \
+        lambda *args, **kwargs : rev_weight(*args,**kwargs)
+    h_fwd = h_ij_bidirectional(**kw_fwd)
+    h_rev = h_ij_bidirectional(**kw_rev_hij)
+    # get the bidirectional estimators
+    boltz_fwd = _weighted_value(**kw_fwd)
+    boltz_rev = _weighted_value(**kw_rev)
+    # make sure if things aren't directional, nothing is changing.
+    if not have_rev:
+        assert boltz_rev == 0
+        assert h_rev == 0
+    else:
+        h_rev = np.flip(h_rev,-1)
+    if not have_fwd:
+        assert boltz_fwd == 0
+        assert h_fwd == 0
+    return h_fwd,h_rev,boltz_fwd,boltz_rev
+
+def _term_helper(fwd_input,rev_input):
+    """
+    :param fwd_input: list of N forward ramps for WHAM
+    :param rev_input:  list of N reverse ramps for WHAM
+    :return: tuple of (_HistogramTerms object for fwd, _HistogramTerms for
+    reverse, deltaA, n_f, n_r, beta)
     """
     n_f = fwd_input.n if fwd_input is not None else 0
     n_r = rev_input.n if rev_input is not None else 0
@@ -337,32 +378,21 @@ def wham(fwd_input=None,rev_input=None):
     else:
         # use both; key_terms will be forward (arbitrary)
         key_terms = fwd_terms
-    kw_bidir = dict(delta_A=delta_A,beta=beta,nf=n_f,nr=n_r)
-    fwd_weight = BidirectionalUtil.ForwardWeighted
-    rev_weight = BidirectionalUtil.ReverseWeighted
-    kw_fwd = dict(terms=fwd_terms,f=fwd_weight,**kw_bidir)
-    kw_rev = dict(terms=rev_terms,f=rev_weight,**kw_bidir)
-    kw_rev_hij = dict(**kw_rev)
-    # for hij, we should keep the index / ordering the same, so we 'flip back'.
-    # the binning takes care of the rest for us.
-    kw_rev_hij['f'] = \
-        lambda *args, **kwargs : np.flip(rev_weight(*args,**kwargs),-1)
-    h_fwd = h_ij_bidirectional(**kw_fwd)
-    h_rev = h_ij_bidirectional(**kw_rev_hij)
-    # determine which will be the key_terms
-    kw_key = kw_fwd if have_fwd else kw_rev
+    return rev_terms, fwd_terms, key_terms, delta_A, n_f, n_r, beta
+
+def wham(fwd_input=None,rev_input=None):
+    """
+    :param fwd: InputWHAM object
+    :return: LandscapeWHAM
+    """
+    rev_terms, fwd_terms, key_terms,delta_A,n_f,n_r,beta = \
+        _term_helper(fwd_input,rev_input)
+    # determine the actual bin sizes
+    # XXX check all the ame?
     dq_hist = np.median(np.diff(key_terms.bins_q))/2
     q_centered = key_terms.bins_q + dq_hist
-    # get the bidirectional estimators
-    boltz_fwd = _weighted_value(**kw_fwd)
-    boltz_rev = _weighted_value(**kw_rev)
-    # make sure if things aren't directional, nothing is changing.
-    if not have_rev:
-        assert boltz_rev == 0
-        assert h_rev == 0
-    if not have_fwd:
-        assert boltz_fwd == 0
-        assert h_fwd == 0
+    tmp = _h_and_boltz_helper(fwd_terms, rev_terms, delta_A, beta, n_f, n_r)
+    h_fwd, h_rev, boltz_fwd, boltz_rev = tmp
     G0_rel = _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms)
     # add back in the offset to go into real units
     q = q_centered
