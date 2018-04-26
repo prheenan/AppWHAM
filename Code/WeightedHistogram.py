@@ -303,7 +303,7 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
     :param n_f: output of _term_helper
     :param n_r: output of _term_helper
     :return:  tuple of (h_ij for the fwd, h_ij for the reverse, boltzmann factor
-    for the fwd, boltmzmann factor for the revere) 
+    for the fwd, boltmzmann factor for the revere)
     """
     have_rev = n_r > 0
     have_fwd = n_f > 0
@@ -316,7 +316,7 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
     # for hij, we should keep the index / ordering the same, so we 'flip back'.
     # the binning takes care of the rest for us.
     kw_rev_hij['f'] = \
-        lambda *args, **kwargs : rev_weight(*args,**kwargs)
+        lambda *args, **kwargs : np.flip(rev_weight(*args,**kwargs),-1)
     h_fwd = h_ij_bidirectional(**kw_fwd)
     h_rev = h_ij_bidirectional(**kw_rev_hij)
     # get the bidirectional estimators
@@ -326,8 +326,6 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
     if not have_rev:
         assert boltz_rev == 0
         assert h_rev == 0
-    else:
-        h_rev = np.flip(h_rev,-1)
     if not have_fwd:
         assert boltz_fwd == 0
         assert h_fwd == 0
