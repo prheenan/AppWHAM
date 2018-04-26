@@ -304,9 +304,9 @@ def _numer_and_denom(key_terms,boltz_fwd,boltz_rev,h_fwd,h_rev):
     :param h_rev: see _energy_terms
     :return: numerator and denominator; -log(n/d) is proportional to energy
     """
-     args = _energy_terms(key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev)
-     numer_j, denom_j = _fraction_terms(*args)
-     return numer_j, denom_j
+    args = _energy_terms(key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev)
+    numer_j, denom_j = _fraction_terms(*args)
+    return numer_j, denom_j
 
 def _G0_from_parition(boltz_fwd,h_fwd,boltz_rev,h_rev,key_terms):
     """

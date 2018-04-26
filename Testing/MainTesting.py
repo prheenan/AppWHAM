@@ -142,7 +142,7 @@ def tst_whitebox(fwd_input,rev_input):
         np.testing.assert_allclose(p[where_finite],key[where_finite],
                                    atol=3,rtol=1e-2)
     # POST: 'just reverse' is pretty blose to bidirectional
-
+    pass
 
 def tst_hummer():
     """
