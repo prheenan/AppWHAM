@@ -125,7 +125,7 @@ def tst_whitebox(fwd_input,rev_input):
     # make sure the fwd and reverse terms match OK
     _check_whitebox(key_terms, rev_terms)
     # key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev
-    term_dicts = [ [key_terms, 0, boltz_rev, 0, h_rev],
+    term_dicts = [ [rev_terms, 0, boltz_rev, 0, h_rev],
                    [key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev]]
     numers, denoms = [],[]
     for terms in term_dicts:
