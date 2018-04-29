@@ -367,6 +367,19 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
         assert h_fwd == 0
     return h_fwd,h_rev,boltz_fwd,boltz_rev
 
+def V_i_j_and_V_i_j_rev(key_input):
+    # get the potential
+    bins_q = key_input.q_bins[:-1]
+    bins_z = key_input.z_bins[:-1]
+    k = key_input.k
+    # get the potential, using the bins
+    zz, qq = np.meshgrid(bins_z,bins_q)
+    V_i_j = _harmonic_V(qq,zz,k)
+    # reverse the potential
+    V_i_j_rev = V_i_j[::-1].copy()
+    V_i_j_rev *= -1
+    return V_i_j, V_i_j_rev
+
 def _term_helper(fwd_input,rev_input):
     """
     :param fwd_input: list of N forward ramps for WHAM
@@ -382,6 +395,7 @@ def _term_helper(fwd_input,rev_input):
     # get the key (for getting beta and such)
     key_input = fwd_input if have_fwd else rev_input
     beta = 1/key_input.kbT
+    V_i_j, V_i_j_rev = V_i_j_and_V_i_j_rev(key_input)
     if (have_fwd and have_rev):
         delta_A = BidirectionalUtil._solve_DeltaA(fwd_input.works,
                                                  rev_input.works,
@@ -400,16 +414,7 @@ def _term_helper(fwd_input,rev_input):
         # the same
         work_offset_fwd = np.mean(key_input.works,axis=0)
         work_offset_rev = work_offset_fwd
-    # get the potential
-    bins_q = key_input.q_bins[:-1]
-    bins_z = key_input.z_bins[:-1]
-    k = key_input.k
-    # get the potential, using the bins
-    zz, qq = np.meshgrid(bins_z,bins_q)
-    V_i_j = _harmonic_V(qq,zz,k)
-    # reverse the potential
-    V_i_j_rev = V_i_j[::-1].copy()
-    V_i_j_rev *= -1
+
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,V_i_j=V_i_j)
     rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
