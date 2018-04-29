@@ -91,15 +91,22 @@ def tst_landscapes(fwd_wham,rev_wham):
     G0_rev -= min(G0_rev)
     check_losses(expected=G0_expected, predicted=G0_rev, **kw_err)
 
+def _check_f(expected_terms,actual_terms,f,**error_kw_tmp):
+    expected = f(expected_terms)
+    actual = f(actual_terms)
+    np.testing.assert_allclose(expected, actual, **error_kw_tmp)
+
 def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.151):
     error_kw = dict(atol=1e-30, rtol=1e-2)
     fs = [ [lambda x: x.with_rightmost_q,error_kw],
            [lambda x: x.with_rightmost_z,error_kw],
-           [lambda x: x.beta,error_kw]]
+           [lambda x: x.beta,error_kw],
+           [lambda x: x.bins_q,error_kw],
+           [lambda x: x.bins_z, error_kw],
+
+           ]
     for i,(f,error_kw_tmp) in enumerate(fs):
-        expected = f(expected_terms)
-        actual = f(actual_terms)
-        np.testing.assert_allclose(expected,actual,**error_kw_tmp)
+        _check_f(expected_terms, actual_terms, f, **error_kw_tmp)
     # check the V a little differently
     V_exp = expected_terms.V_i_j_offset
     V_actual = actual_terms.V_i_j_offset
@@ -108,6 +115,7 @@ def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.151):
     V_rel_loss = (V_loss / V_mean)
     median_loss = np.median(V_rel_loss)
     assert median_loss < max_median_loss
+
 
 def tst_whitebox(fwd_input,rev_input):
     # get the terms with fwd and reverse
@@ -124,6 +132,7 @@ def tst_whitebox(fwd_input,rev_input):
                                               beta_rev, n_f_rev, n_r_rev)
     # make sure the fwd and reverse terms match OK
     _check_whitebox(key_terms, rev_terms)
+    rev_terms.V_i_j_offset = key_terms.V_i_j_offset
     # key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev
     term_dicts = [ [rev_terms, 0, boltz_rev, 0, h_rev],
                    [key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev]]
@@ -133,14 +142,17 @@ def tst_whitebox(fwd_input,rev_input):
         numers.append(numer)
         denoms.append(denom)
     to_plot = [-np.log(n/d) for n,d in zip(numers,denoms)]
+    to_plot = [ p -min(p) for p in to_plot]
     colors = ['r','b','g']
     key = to_plot[-1]
     for p,c in zip(to_plot,colors):
+        plt.plot(p,color=c)
         where_finite = np.where(np.isfinite(p))
         # XXX assert finite everywhere?
         # all units are kbT
         np.testing.assert_allclose(p[where_finite],key[where_finite],
                                    atol=3,rtol=1e-2)
+    plt.show()
     # POST: 'just reverse' is pretty blose to bidirectional
     pass
 

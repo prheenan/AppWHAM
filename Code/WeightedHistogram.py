@@ -170,6 +170,11 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
         z_array = np.array([z for _ in works])
     else:
         z_array = np.array(z)
+    z_key = z_array[0]
+    if (z_key[-1] < z_key[0]):
+        sanit = lambda x: np.flip(x,-1)
+    else:
+        sanit = lambda x: x
     # get the potential, using the bins
     zz, qq = np.meshgrid(bins_z,bins_q)
     V_i_j = _harmonic_V(qq,zz,k)
@@ -187,8 +192,10 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     if (is_reverse):
         V_i_j_offset = V_i_j_offset[::-1]
         V_i_j_offset *= -1
-    to_ret = _HistogramTerms(boltz_array, V_i_j_offset, extension_array,z_array,
-                             with_rightmost_q,with_rightmost_z,W_offset,beta,
+    to_ret = _HistogramTerms(boltz_array, V_i_j_offset,
+                             sanit(extension_array),sanit(z_array),
+                             with_rightmost_q,with_rightmost_z,W_offset,
+                             beta,
                              work_subtracted=work_offset)
     return to_ret
 
