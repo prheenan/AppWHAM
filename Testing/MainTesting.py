@@ -96,7 +96,7 @@ def _check_f(expected_terms,actual_terms,f,**error_kw_tmp):
     actual = f(actual_terms)
     np.testing.assert_allclose(expected, actual, **error_kw_tmp)
 
-def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.151):
+def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.172):
     error_kw = dict(atol=1e-30, rtol=1e-2)
     fs = [ [lambda x: x.with_rightmost_q,error_kw],
            [lambda x: x.with_rightmost_z,error_kw],

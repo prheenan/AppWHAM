@@ -138,7 +138,7 @@ def _bin_with_rightmost(array,n):
                                  endpoint=True,num=n+1)
     return with_rightmost
 
-def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
+def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,V_i_j,
                      is_reverse=False):
     """
     :param z: array of size M; each element are the spring positions (i.e. z,
@@ -160,11 +160,6 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     assert len(work_array.shape) > 1 and work_array.shape[1] > 0 , \
         "Must have at least one z point to use "
     assert work_array.shape[0] > 1 , "Must have at least 2 FEC"
-    # get the extension bins, including one for the rightmost edge (last point)
-    with_rightmost_q = q_bins
-    with_rightmost_z = z_bins
-    bins_q = with_rightmost_q[:-1]
-    bins_z = with_rightmost_z[:-1]
     # make the z matrix; allow for just passing in a single one...
     if (len(z_array.shape) == 1 or z_array.shape[1] == 0):
         z_array = np.array([z for _ in works])
@@ -175,13 +170,9 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
         sanit = lambda x: np.flip(x,-1)
     else:
         sanit = lambda x: x
-    # get the potential, using the bins
-    zz, qq = np.meshgrid(bins_z,bins_q)
-    V_i_j = _harmonic_V(qq,zz,k)
-    if (is_reverse):
-        # reverse the potential
-        V_i_j = V_i_j[::-1].copy()
-        V_i_j *= -1
+    # get the extension bins, including one for the rightmost edge (last point)
+    with_rightmost_q = q_bins
+    with_rightmost_z = z_bins
     # determine the energy offset at each Z.
     assert work_offset.size == work_array.shape[1]
     # offset the work and potential to avoid overflows
@@ -409,9 +400,20 @@ def _term_helper(fwd_input,rev_input):
         # the same
         work_offset_fwd = np.mean(key_input.works,axis=0)
         work_offset_rev = work_offset_fwd
+    # get the potential
+    bins_q = key_input.q_bins[:-1]
+    bins_z = key_input.z_bins[:-1]
+    k = key_input.k
+    # get the potential, using the bins
+    zz, qq = np.meshgrid(bins_z,bins_q)
+    V_i_j = _harmonic_V(qq,zz,k)
+    # reverse the potential
+    V_i_j_rev = V_i_j[::-1].copy()
+    V_i_j_rev *= -1
     # get the forward
-    fwd_terms = get_terms(fwd_input, work_offset_fwd, beta)
-    rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True)
+    fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,V_i_j=V_i_j)
+    rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
+                          V_i_j=V_i_j_rev)
     if (have_fwd and not have_rev):
         # use forward
         key_terms = fwd_terms
