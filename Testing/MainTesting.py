@@ -62,18 +62,24 @@ def tst_landscapes(fwd_wham,rev_wham):
                                            rev_input=rev_wham)
     q = wham_landcape.q
     data_base = "../data/"
-    G0_expected = expected_bidirectional(data_base, q)
-    G0_WHAM = wham_landcape.G0
-    G0_WHAM -= min(G0_WHAM)
     kT = 1 / wham_landcape.beta
     kw_err = dict(atol=1.25 * kT, max_rel_loss=0.0162, rtol=3e-2)
-    check_losses(expected=G0_expected, predicted=G0_WHAM, **kw_err)
+    G0_expected = expected_bidirectional(data_base, q)
     # check the forward is close
     wham_landcape_fwd = WeightedHistogram.wham(fwd_input=fwd_wham)
     G0_fwd = wham_landcape_fwd.G0
     G0_fwd -= min(G0_fwd)
     check_losses(expected=G0_expected, predicted=G0_fwd, **kw_err)
-    # check the 'forward as reverse' ist close
+    # check that the reverse is close
+    wham_landcape_rev = WeightedHistogram.wham(rev_input=rev_wham)
+    G0_rev = wham_landcape_rev.G0
+    G0_rev -= min(G0_rev)
+    check_losses(expected=G0_expected, predicted=G0_rev, **kw_err)
+    # check that bidirectional works
+    G0_WHAM = wham_landcape.G0
+    G0_WHAM -= min(G0_WHAM)
+    check_losses(expected=G0_expected, predicted=G0_WHAM, **kw_err)
+    # check the 'forward as reverse' isnt close
     wham_landcape_fwd_2 = WeightedHistogram.wham(rev_input=fwd_wham)
     G0_fwd_2 = wham_landcape_fwd_2.G0
     G0_fwd_2 -= min(G0_fwd_2)
@@ -85,11 +91,6 @@ def tst_landscapes(fwd_wham,rev_wham):
     G0_rev_2 -= min(G0_rev_2)
     check_losses(expected=G0_expected, predicted=G0_rev_2,
                  assert_doesnt_match=True, **kw_err)
-    # check that the reverse is close
-    wham_landcape_rev = WeightedHistogram.wham(rev_input=rev_wham)
-    G0_rev = wham_landcape_rev.G0
-    G0_rev -= min(G0_rev)
-    check_losses(expected=G0_expected, predicted=G0_rev, **kw_err)
 
 def _check_f(expected_terms,actual_terms,f,**error_kw_tmp):
     expected = f(expected_terms)
