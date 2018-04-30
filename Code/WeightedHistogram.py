@@ -139,7 +139,7 @@ def _bin_with_rightmost(array,n):
     return with_rightmost
 
 def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
-                     V_i_j_offset,is_reverse=False):
+                     V_i_j_offset):
     """
     :param z: array of size M; each element are the spring positions (i.e. z,
     e.g. the stage position in AFM) of size N. Units of m
@@ -150,6 +150,7 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
     :param work_offset: how to offset the work, in J. Size MxN
     :param k: spring constant, in N/m
     :param beta: the inverse boltzmann energy (1/kbT) in J
+    :param V_i_j_offset: the forward-sense, already-offset potential
     :return: _HistogramTerms object
     """
     work_array = np.array(works,dtype=np.float64)
@@ -363,7 +364,11 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
         assert h_fwd == 0
     return h_fwd,h_rev,boltz_fwd,boltz_rev
 
-def V_i_j_and_V_i_j_rev(key_input):
+def _V_i_j_harmonic(key_input):
+    """
+    :param key_input: InputWHAM object
+    :return: potential matrix v[i][j], running along q and z (i and j, resp.)
+    """
     # get the potential
     bins_q = key_input.q_bins[:-1]
     bins_z = key_input.z_bins[:-1]
@@ -374,7 +379,7 @@ def V_i_j_and_V_i_j_rev(key_input):
     # reverse the potential
     V_i_j_rev = V_i_j[::-1].copy()
     V_i_j_rev *= -1
-    return V_i_j, V_i_j_rev
+    return V_i_j
 
 def _term_helper(fwd_input,rev_input):
     """
@@ -391,33 +396,25 @@ def _term_helper(fwd_input,rev_input):
     # get the key (for getting beta and such)
     key_input = fwd_input if have_fwd else rev_input
     beta = 1/key_input.kbT
-    V_i_j, V_i_j_rev = V_i_j_and_V_i_j_rev(key_input)
-    V_mean_rev = np.mean(V_i_j, axis=0) * -1
-    V_mean_rev -= V_mean_rev[0]
+    V_i_j = _V_i_j_harmonic(key_input)
+    work_offset_fwd = np.mean(V_i_j, axis=0)
+    work_offset_fwd -= work_offset_fwd[0]
     if (have_fwd and have_rev):
         delta_A = BidirectionalUtil._solve_DeltaA(fwd_input.works,
                                                  rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
-        work_offset_fwd = np.mean(V_i_j,axis=0)
-        work_offset_fwd -= work_offset_fwd[0]
-        work_offset_rev = -1 * work_offset_fwd.copy()
     else:
         delta_A = 0
-        # only one (the correct one) will be used, so we can set the offsets
-        # the same
-        work_offset_fwd = np.mean(V_i_j,axis=0)
-        work_offset_fwd -= work_offset_fwd[0]
-        work_offset_rev = -1 * work_offset_fwd.copy()
-    work_offset_rev_cp = work_offset_rev.copy()
-    work_offset_rev_cp = work_offset_rev_cp[::-1] * -1
-    work_offset_rev_cp -= work_offset_rev_cp[0]
-    work_offset_rev = work_offset_rev_cp.copy()
-    # get the forward
+    work_offset_rev = work_offset_fwd.copy()
+    work_offset_rev = work_offset_rev[::-1]
+    work_offset_rev -= work_offset_rev[0]
+    # get the potential; we want it in reference to the forward state (since
+    # BidirectionalUtil.ReverseWeighted makes things forward-sense)
     V_i_j_offset = V_i_j - work_offset_fwd
     fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,
                           V_i_j_offset=V_i_j_offset)
-    rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
+    rev_terms = get_terms(rev_input, work_offset_rev, beta,
                           V_i_j_offset=V_i_j_offset)
     if (have_fwd and not have_rev):
         # use forward

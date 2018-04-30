@@ -145,10 +145,9 @@ def tst_whitebox(fwd_input,rev_input):
         denoms.append(denom)
     to_plot = [-np.log(n/d) for n,d in zip(numers,denoms)]
     to_plot = [ p -min(p) for p in to_plot]
-    colors = ['r','b','g']
     key = to_plot[-1]
     # make sure all of the landscapes (in kT) are close to the key
-    for p,c in zip(to_plot,colors):
+    for p in to_plot:
         where_finite = np.where(np.isfinite(p))
         # XXX assert finite everywhere?
         # all units are kbT
@@ -159,11 +158,15 @@ def tst_whitebox(fwd_input,rev_input):
     kT = 1 / rev_terms.beta
     G0_expected = expected_bidirectional(data_base, q)
     G0_kT = G0_expected/kT
-    debug = True
+    debug = False
+    colors = ['r','b','g']
+    labels = ['rev (from both)','rev (only)','both']
     if (debug):
-        for p,c in zip(to_plot,colors):
-            plt.plot(p,color=c)
-        plt.plot(G0_kT,'g--')
+        for p,c,l in zip(to_plot,colors,labels):
+            plt.plot(p,color=c,label=l)
+        plt.plot(G0_kT,'g--',label="Expected.")
+        plt.xlabel("au (~extension)")
+        plt.ylabel("G (kT)")
         plt.show()
     np.testing.assert_allclose(G0_kT, key, atol=2, rtol=1e-2)
 
