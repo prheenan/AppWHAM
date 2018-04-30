@@ -54,7 +54,7 @@ def _debug_run(fwd_input,rev_input):
     # make a plot of how we obtain h_i_j
     fwd_rev = [fwd_input, rev_input]
     for input_tmp, (_,style) in zip(fwd_rev,plot_args):
-        works = np.array(input_tmp.W)
+        pass
     # make a plot of the various
     for t,style in plot_args:
         boltzmann_V_i_j, h_i_j, eta_i = t
@@ -82,5 +82,6 @@ def _debug_run(fwd_input,rev_input):
         plt.xlabel("x (au)")
         plt.legend()
     plt.show()
+    pass
 
 
