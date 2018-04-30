@@ -138,8 +138,8 @@ def _bin_with_rightmost(array,n):
                                  endpoint=True,num=n+1)
     return with_rightmost
 
-def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,V_i_j,
-                     is_reverse=False):
+def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,
+                     V_i_j_offset,is_reverse=False):
     """
     :param z: array of size M; each element are the spring positions (i.e. z,
     e.g. the stage position in AFM) of size N. Units of m
@@ -177,12 +177,8 @@ def _histogram_terms(z,extensions,works,q_bins,z_bins,work_offset,k,beta,V_i_j,
     assert work_offset.size == work_array.shape[1]
     # offset the work and potential to avoid overflows
     W_offset = work_array - work_offset
-    V_i_j_offset = (V_i_j - work_offset)
     # POST: work_array and V_i_j are now offset how we like..
     boltz_array = np.exp(-W_offset * beta)
-    if (is_reverse):
-        V_i_j_offset = V_i_j_offset[::-1]
-        V_i_j_offset *= -1
     to_ret = _HistogramTerms(boltz_array, V_i_j_offset,
                              sanit(extension_array),sanit(z_array),
                              with_rightmost_q,with_rightmost_z,W_offset,
@@ -405,24 +401,24 @@ def _term_helper(fwd_input,rev_input):
                                                  beta=beta)
         work_offset_fwd = np.mean(V_i_j,axis=0)
         work_offset_fwd -= work_offset_fwd[0]
-        work_offset_rev = V_mean_rev
+        work_offset_rev = -1 * work_offset_fwd.copy()
     else:
         delta_A = 0
         # only one (the correct one) will be used, so we can set the offsets
         # the same
         work_offset_fwd = np.mean(V_i_j,axis=0)
         work_offset_fwd -= work_offset_fwd[0]
-        work_offset_rev = V_mean_rev
-    if have_rev:
-        w_rev_tmp = np.array(rev_input.works).copy()
-        w_rev_tmp_cp = np.flip(w_rev_tmp, -1)
-        w_rev_tmp_cp = (w_rev_tmp_cp.T - w_rev_tmp_cp[:, 0]).T
-        w_rev_tmp_cp *= -1
-        rev_input.works = w_rev_tmp_cp
+        work_offset_rev = -1 * work_offset_fwd.copy()
+    work_offset_rev_cp = work_offset_rev.copy()
+    work_offset_rev_cp = work_offset_rev_cp[::-1] * -1
+    work_offset_rev_cp -= work_offset_rev_cp[0]
+    work_offset_rev = work_offset_rev_cp.copy()
     # get the forward
-    fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,V_i_j=V_i_j)
+    V_i_j_offset = V_i_j - work_offset_fwd
+    fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,
+                          V_i_j_offset=V_i_j_offset)
     rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
-                          V_i_j=V_i_j_rev)
+                          V_i_j_offset=V_i_j_offset)
     if (have_fwd and not have_rev):
         # use forward
         key_terms = fwd_terms

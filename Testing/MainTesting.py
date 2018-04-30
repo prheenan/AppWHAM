@@ -64,7 +64,7 @@ def tst_landscapes(fwd_wham,rev_wham):
                                            rev_input=rev_wham)
     q = wham_landcape.q
     kT = 1 / wham_landcape.beta
-    kw_err = dict(atol=1.25 * kT, max_rel_loss=0.0162, rtol=3e-2)
+    kw_err = dict(atol=2 * kT, max_rel_loss=0.0162, rtol=3e-2)
     G0_expected = expected_bidirectional(data_base, q)
     # check the forward is close
     wham_landcape_fwd = WeightedHistogram.wham(fwd_input=fwd_wham)
@@ -147,21 +147,26 @@ def tst_whitebox(fwd_input,rev_input):
     to_plot = [ p -min(p) for p in to_plot]
     colors = ['r','b','g']
     key = to_plot[-1]
+    # make sure all of the landscapes (in kT) are close to the key
     for p,c in zip(to_plot,colors):
         where_finite = np.where(np.isfinite(p))
         # XXX assert finite everywhere?
         # all units are kbT
         np.testing.assert_allclose(p[where_finite],key[where_finite],
                                    atol=3,rtol=1e-2)
-    q = rev_terms.bins_q
+    # make sure the key is close to the expected
+    q = key_terms.bins_q
     kT = 1 / rev_terms.beta
     G0_expected = expected_bidirectional(data_base, q)
-    for p,c in zip(to_plot,colors):
-        plt.plot(p,color=c)
-    plt.plot(G0_expected/kT,'r--')
-    plt.show()
-    # POST: 'just reverse' is pretty blose to bidirectional
-    pass
+    G0_kT = G0_expected/kT
+    debug = True
+    if (debug):
+        for p,c in zip(to_plot,colors):
+            plt.plot(p,color=c)
+        plt.plot(G0_kT,'g--')
+        plt.show()
+    np.testing.assert_allclose(G0_kT, key, atol=2, rtol=1e-2)
+
 
 def tst_hummer():
     """
