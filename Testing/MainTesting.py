@@ -96,7 +96,7 @@ def _check_f(expected_terms,actual_terms,f,**error_kw_tmp):
     actual = f(actual_terms)
     np.testing.assert_allclose(expected, actual, **error_kw_tmp)
 
-def _check_whitebox(expected_terms,actual_terms,max_median_loss = 0.172):
+def _check_whitebox(expected_terms,actual_terms,max_median_loss = 1e-3):
     error_kw = dict(atol=1e-30, rtol=1e-2)
     fs = [ [lambda x: x.with_rightmost_q,error_kw],
            [lambda x: x.with_rightmost_z,error_kw],
@@ -132,9 +132,9 @@ def tst_whitebox(fwd_input,rev_input):
                                               beta_rev, n_f_rev, n_r_rev)
     # make sure the fwd and reverse terms match OK
     _check_whitebox(key_terms, rev_terms)
-    rev_terms.V_i_j_offset = key_terms.V_i_j_offset
     # key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev
     term_dicts = [ [rev_terms, 0, boltz_rev, 0, h_rev],
+                   [rev_terms_only, 0, boltz_rev_only, 0, h_rev_only],
                    [key_terms, boltz_fwd, boltz_rev, h_fwd, h_rev]]
     numers, denoms = [],[]
     for terms in term_dicts:

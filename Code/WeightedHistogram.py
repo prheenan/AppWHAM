@@ -396,25 +396,23 @@ def _term_helper(fwd_input,rev_input):
     key_input = fwd_input if have_fwd else rev_input
     beta = 1/key_input.kbT
     V_i_j, V_i_j_rev = V_i_j_and_V_i_j_rev(key_input)
+    V_mean_rev = np.mean(V_i_j, axis=0) * -1
+    V_mean_rev -= V_mean_rev[0]
     if (have_fwd and have_rev):
         delta_A = BidirectionalUtil._solve_DeltaA(fwd_input.works,
                                                  rev_input.works,
                                                  offset_fwd=0,
                                                  beta=beta)
-        w_fwd_tmp = np.mean(fwd_input.works,axis=0)
-        # reverse and re-zero the work, so the offsets are close.
-        w_rev_tmp = np.mean(rev_input.works, axis=0)[::-1]
-        w_rev_tmp -= min(w_rev_tmp)
-        work_offset_fwd = 0.5 * ( w_fwd_tmp + w_rev_tmp )
-        work_offset_rev = work_offset_fwd[::-1].copy()
-        work_offset_rev -= work_offset_rev[0]
+        work_offset_fwd = np.mean(V_i_j,axis=0)
+        work_offset_fwd -= work_offset_fwd[0]
+        work_offset_rev = V_mean_rev
     else:
         delta_A = 0
         # only one (the correct one) will be used, so we can set the offsets
         # the same
-        work_offset_fwd = np.mean(key_input.works,axis=0)
-        work_offset_rev = work_offset_fwd
-
+        work_offset_fwd = np.mean(V_i_j,axis=0)
+        work_offset_fwd -= work_offset_fwd[0]
+        work_offset_rev = V_mean_rev
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,V_i_j=V_i_j)
     rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
