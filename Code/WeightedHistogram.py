@@ -413,6 +413,12 @@ def _term_helper(fwd_input,rev_input):
         work_offset_fwd = np.mean(V_i_j,axis=0)
         work_offset_fwd -= work_offset_fwd[0]
         work_offset_rev = V_mean_rev
+    if have_rev:
+        w_rev_tmp = np.array(rev_input.works).copy()
+        w_rev_tmp_cp = np.flip(w_rev_tmp, -1)
+        w_rev_tmp_cp = (w_rev_tmp_cp.T - w_rev_tmp_cp[:, 0]).T
+        w_rev_tmp_cp *= -1
+        rev_input.works = w_rev_tmp_cp
     # get the forward
     fwd_terms = get_terms(fwd_input, work_offset_fwd, beta,V_i_j=V_i_j)
     rev_terms = get_terms(rev_input, work_offset_rev, beta,is_reverse=True,
