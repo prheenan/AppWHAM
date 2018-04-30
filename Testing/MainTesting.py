@@ -64,7 +64,7 @@ def tst_landscapes(fwd_wham,rev_wham):
                                            rev_input=rev_wham)
     q = wham_landcape.q
     kT = 1 / wham_landcape.beta
-    kw_err = dict(atol=2 * kT, max_rel_loss=0.0162, rtol=3e-2)
+    kw_err = dict(atol=2 * kT, max_rel_loss=0.015, rtol=3e-2)
     G0_expected = expected_bidirectional(data_base, q)
     # check the forward is close
     wham_landcape_fwd = WeightedHistogram.wham(fwd_input=fwd_wham)
@@ -92,6 +92,17 @@ def tst_landscapes(fwd_wham,rev_wham):
     G0_rev_2 -= min(G0_rev_2)
     check_losses(expected=G0_expected, predicted=G0_rev_2,
                  assert_doesnt_match=True, **kw_err)
+    debug = True
+    if (debug):
+        style_data_common = dict(alpha=0.3,linestyle='--')
+        plt.plot(G0_expected,color='g',label="expected",alpha=0.5,linestyle=":")
+        plt.plot(G0_expected,color='b',label="both",**style_data_common)
+        plt.plot(G0_rev,color='r',label="rev",**style_data_common)
+        plt.plot(G0_fwd,color='m',label="fwd",**style_data_common)
+        plt.ylabel("G (J)")
+        plt.xlabel("x (au)")
+        plt.legend()
+        plt.show()
 
 def _check_f(expected_terms,actual_terms,f,**error_kw_tmp):
     expected = f(expected_terms)

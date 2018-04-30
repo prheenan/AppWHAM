@@ -52,8 +52,9 @@ def _debug_run(fwd_input,rev_input):
                  [t_rev, dict(linestyle='--',label='rev',**style_common)],
                  [t_both, dict(linestyle='-',label='both',**style_common)]]
     # make a plot of how we obtain h_i_j
-    for t,style in plot_args:
-        pass
+    fwd_rev = [fwd_input, rev_input]
+    for input_tmp, (_,style) in zip(fwd_rev,plot_args):
+        works = np.array(input_tmp.W)
     # make a plot of the various
     for t,style in plot_args:
         boltzmann_V_i_j, h_i_j, eta_i = t

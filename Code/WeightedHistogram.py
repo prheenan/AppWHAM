@@ -345,13 +345,8 @@ def _h_and_boltz_helper(fwd_terms,rev_terms,delta_A,beta,n_f,n_r):
     rev_weight = BidirectionalUtil.ReverseWeighted
     kw_fwd = dict(terms=fwd_terms,f=fwd_weight,**kw_bidir)
     kw_rev = dict(terms=rev_terms,f=rev_weight,**kw_bidir)
-    kw_rev_hij = dict(**kw_rev)
-    # for hij, we should keep the index / ordering the same, so we 'flip back'.
-    # the binning takes care of the rest for us.
-    kw_rev_hij['f'] = \
-        lambda *args, **kwargs : np.flip(rev_weight(*args,**kwargs),-1)
     h_fwd = h_ij_bidirectional(**kw_fwd)
-    h_rev = h_ij_bidirectional(**kw_rev_hij)
+    h_rev = h_ij_bidirectional(**kw_rev)
     # get the bidirectional estimators
     boltz_fwd = _weighted_value(**kw_fwd)
     boltz_rev = _weighted_value(**kw_rev)
