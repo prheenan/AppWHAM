@@ -17,7 +17,8 @@ def to_wham_input(objs,n_ext_bins=200):
         return []
     # POST: actually have something to return.
     key = objs[0]
-    z = key.Offset + key.Velocity * (key.Time - min(key.Time))
+    offset =  key.Offset
+    z = offset + key.Velocity * (key.Time - min(key.Time))
     extensions = [f.Extension for f in objs]
     forces = [f.Force for f in objs]
     works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
@@ -53,8 +54,12 @@ def _debug_run(fwd_input,rev_input):
                  [t_both, dict(linestyle='-',label='both',**style_common)]]
     # make a plot of how we obtain h_i_j
     fwd_rev = [fwd_input, rev_input]
+    V_i_j = WeightedHistogram._V_i_j_harmonic(key_input=fwd_input)
     for input_tmp, (_,style) in zip(fwd_rev,plot_args):
-        pass
+        mean_work = np.mean(input_tmp.works,axis=0)
+        plt.plot(mean_work,**style)
+    plt.plot(np.mean(V_i_j,axis=0))
+    plt.show()
     # make a plot of the various
     for t,style in plot_args:
         boltzmann_V_i_j, h_i_j, eta_i = t
