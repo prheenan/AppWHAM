@@ -13,7 +13,7 @@ import warnings
 from scipy.stats import binned_statistic_2d, binned_statistic
 from .UtilLandscape import BidirectionalUtil, Conversions
 
-class LandscapeWHAM(object):
+class LandscapeWHAM(BidirectionalUtil._BaseLandscape):
     def __init__(self,q,G0,offset_G0_of_q,beta):
         """
         :param q: extension in meters, size N
@@ -21,35 +21,15 @@ class LandscapeWHAM(object):
         :param offset_G0_of_q: offset used for energy, size N
         :param beta:  1/kbT, units of J
         """
-        self._q = q
-        self._G0 = G0
+        super(LandscapeWHAM,self).__init__(q=q,G0=G0,beta=beta)
         self._offset_G0_of_q = offset_G0_of_q
-        self.beta = beta
     def _slice(self,s):
         to_ret = LandscapeWHAM(self._q,self._G0,self._offset_G0_of_q,self.beta)
         sanit = lambda x: x[s].copy()
         to_ret._q  = sanit(to_ret._q)
         to_ret._G0 = sanit(to_ret._G0)
         return to_ret
-    @property
-    def energy(self):
-        return self._G0
-    @property
-    def G0(self):
-        return self.energy
-    @property
-    def q(self):
-        return self._q
-    @property
-    def q_nm(self):
-        return self.q * 1e9
-    @property
-    def G0_kT(self):
-        return self.G0 * self.beta
-    @property
-    def G0_kcal_per_mol(self):
-        # J/mol -> kcal/mol (note that the 1/mol are implicit)
-        return self.G0 * Conversions.kcal_per_mol_per_J()
+
 
 class InputWHAM(object):
     def __init__(self,extensions,works,z,kbT,n_ext_bins,k):
