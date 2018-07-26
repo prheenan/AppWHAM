@@ -171,11 +171,16 @@ def _wham_sum_hij_times_M(fwd,value_array):
     q_flat = fwd.extension_array.flatten()
     z_flat = fwd.z_array.flatten()
     val_flat = value_array.flatten()
+    bins_w_edge_q = fwd.with_rightmost_q
+    bins_w_edge_z = fwd.with_rightmost_z
+    ranges = [ [bins_w_edge_q[0],bins_w_edge_q[-1]],
+               [bins_w_edge_z[0],bins_w_edge_z[-1]]]
     hist = binned_statistic_2d(x=q_flat,
                                y=z_flat,
                                values=val_flat,
                                statistic='sum',
-                               bins=(fwd.with_rightmost_q,fwd.with_rightmost_z))
+                               bins=(bins_w_edge_q,bins_w_edge_z),
+                               range=ranges)
     stat, bins_q, bins_z, binnumber = hist
     # XXX check bins?
     return stat
