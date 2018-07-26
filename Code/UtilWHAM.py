@@ -12,13 +12,17 @@ import sys
 from scipy.integrate import cumtrapz
 from . import WeightedHistogram
 
-def to_wham_input(objs,n_ext_bins=200):
-    if len(objs) == 0:
-        return []
-    # POST: actually have something to return.
+def _wham_input_from_z(objs,z,n_ext_bins):
+    """
+    :param objs: n_ext_bins: see _wham_input_from_z
+    :param n_ext_bins: see _wham_input_from_z
+    :param z: the z values to use when calculating work. z[i] should correspond
+    to (roughly) f[i].
+    :return:  see _wham_input_from_z
+    :return:
+    """
+    assert len(objs) > 0
     key = objs[0]
-    offset =  key.Offset
-    z = offset + key.Velocity * (key.Time - min(key.Time))
     extensions = [f.Extension for f in objs]
     forces = [f.Force for f in objs]
     works = [cumtrapz(y=f,x=z,initial=0) for f in forces]
@@ -29,6 +33,21 @@ def to_wham_input(objs,n_ext_bins=200):
                     k=key.SpringConstant,
                     n_ext_bins=n_ext_bins)
     to_ret = WeightedHistogram.InputWHAM(**dict_obj)
+    return to_ret
+
+def to_wham_input(objs,n_ext_bins=200):
+    """
+    :param objs: n_ext_bins: see _wham_input_from_z
+    :param n_ext_bins: see _wham_input_from_z
+    :return:  see _wham_input_from_z
+    """
+    if len(objs) == 0:
+        return []
+    # POST: actually have something to return.
+    key = objs[0]
+    offset =  key.Offset
+    z = offset + key.Velocity * (key.Time - min(key.Time))
+    to_ret = _wham_input_from_z(objs,z,n_ext_bins)
     return to_ret
 
 def _debug_run(fwd_input,rev_input):

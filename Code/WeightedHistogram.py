@@ -173,6 +173,15 @@ def _wham_sum_hij_times_M(fwd,value_array):
     val_flat = value_array.flatten()
     bins_w_edge_q = fwd.with_rightmost_q
     bins_w_edge_z = fwd.with_rightmost_z
+    """
+    See: 
+    
+    docs.scipy.org/doc/scipy/reference/generated/
+    scipy.stats.binned_statistic_2d.html
+    
+         All values outside of this <range> will be considered outliers and not 
+         tallied in the histogram.
+    """
     ranges = [ [bins_w_edge_q[0],bins_w_edge_q[-1]],
                [bins_w_edge_z[0],bins_w_edge_z[-1]]]
     hist = binned_statistic_2d(x=q_flat,
