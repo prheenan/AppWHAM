@@ -17,7 +17,7 @@ def _wham_input_from_z(objs,z,n_ext_bins):
     :param objs: n_ext_bins: see _wham_input_from_z
     :param n_ext_bins: see _wham_input_from_z
     :param z: the z values to use when calculating work. z[i] should correspond
-    to (roughly) f[i].
+    to (roughly) f[i]. XXX should make this
     :return:  see _wham_input_from_z
     :return:
     """
@@ -66,6 +66,23 @@ def _debug_run(fwd_input,rev_input):
         numer_tmp, denom_tmp = WeightedHistogram._fraction_terms(*t)
         numers.append(numer_tmp)
         denoms.append(denom_tmp)
+    plt.close()
+    plot_x = lambda _x: _x * 1e9
+    for i, list_v in enumerate([fwd_input, rev_input]):
+        plt.subplot(2, 1, (i + 1))
+        plt.plot(plot_x(list_v.z), plot_x(list_v.z),
+                 label="q=z")
+        for j, ext in enumerate(list_v.extensions):
+            plt.plot(plot_x(list_v.z), plot_x(ext), ',')
+            if i > 0:
+                plt.xlabel("z (nm)")
+            if i == 0:
+                plt.title("fwd")
+            else:
+                plt.title('rev')
+            plt.ylabel("q (nm)")
+        plt.legend()
+    plt.show()
     # make several plots to see how the calculation is proceeding
     style_common = dict(alpha=0.3)
     plot_args = [[t_fwd, dict(linestyle=':',label='fwd',**style_common)],
