@@ -85,16 +85,34 @@ def _debug_run(fwd_input,rev_input):
     plt.show()
     # make several plots to see how the calculation is proceeding
     style_common = dict(alpha=0.3)
-    plot_args = [[t_fwd, dict(linestyle=':',label='fwd',**style_common)],
-                 [t_rev, dict(linestyle='--',label='rev',**style_common)],
-                 [t_both, dict(linestyle='-',label='both',**style_common)]]
+    plot_args = [[t_fwd, dict(linestyle=':',label='fwd',color='r',
+                              **style_common)],
+                 [t_rev, dict(linestyle='--',label='rev',color='b',
+                              **style_common)],
+                 [t_both, dict(linestyle='-',label='both',color='k',
+                               **style_common)]]
     # make a plot of how we obtain h_i_j
     fwd_rev = [fwd_input, rev_input]
     V_i_j = WeightedHistogram._V_i_j_harmonic(key_input=fwd_input)
+    mean_V_ij = np.mean(V_i_j,axis=0)
+    x = np.arange(0,mean_V_ij.size,1)
+    stdevs = []
+    plt.subplot(2,1,1)
     for input_tmp, (_,style) in zip(fwd_rev,plot_args):
         mean_work = np.mean(input_tmp.works,axis=0)
-        plt.plot(mean_work,**style)
-    plt.plot(np.mean(V_i_j,axis=0))
+        std_work = np.std(input_tmp.works,axis=0)
+        plt.plot(x,mean_work,**style)
+        plt.fill_between(x,mean_work-std_work,mean_work+std_work,
+                         color=style['color'],alpha=0.3)
+        stdevs.append(std_work)
+    plt.plot(x,mean_V_ij)
+    plt.legend()
+    plt.ylabel("Work (J), $\mu \pm \sigma$")
+    plt.subplot(2,1,2)
+    for s, (_,style) in zip(stdevs,plot_args):
+        plt.plot(s/4.1e-21,**style)
+    plt.legend()
+    plt.ylabel("Stdev of Work (kT)")
     plt.show()
     # make a plot of the various
     for t,style in plot_args:
